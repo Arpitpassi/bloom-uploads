@@ -2,9 +2,11 @@
   "name": "my-v0-project",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "build": "bun run build",
-    "dev": "bun run dev"
+ "scripts": {
+    "start": "vite --config vite.config.js",
+    "build": "vite build --config vite.config.js",
+    "deploy": "perma-deploy --ant-process SvcHmgBgdRi4mAAcpw4zVcHnhyWGOyZWIMM3c1ABaEA --undername bloom-uploads",
+    "build-and-deploy": "npm --version && npx nitya deploy"
   },
   "dependencies": {
     "@ardrive/turbo-sdk": "latest",
