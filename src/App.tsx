@@ -19,6 +19,7 @@ import {
   Check,
   AlertCircle,
   Loader2,
+  LogOut,
 } from "lucide-react"
 import { ArconnectSigner, ArweaveSigner, type TurboAuthenticatedClient, TurboFactory } from "@ardrive/turbo-sdk/web"
 import Arweave from "arweave"
@@ -56,6 +57,7 @@ const App = () => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [generalError, setGeneralError] = useState<string>("")
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [walletType, setWalletType] = useState<"sponsored" | "external" | null>(null)
 
   useEffect(() => {
     const checkMobile = () => {
@@ -74,6 +76,7 @@ const App = () => {
       const { name, wallet } = JSON.parse(savedProfile)
       setProfileName(name)
       setWallet(wallet)
+      setWalletType("sponsored") // Add this line - saved profiles are always sponsored wallets
       arweave.wallets.getAddress(wallet).then((addr) => setAddress(addr))
     } else {
       setShowWalletOptions(true)
@@ -90,7 +93,20 @@ const App = () => {
     setProfileName("")
     setWallet(null)
     setAddress("")
+    setTurbo(null)
+    setWalletType(null) // Add this line
     setShowWalletOptions(true)
+  }
+
+  const disconnectWallet = () => {
+    setWallet(null)
+    setAddress("")
+    setTurbo(null)
+    setProfileName("")
+    setWalletType(null) // Add this line
+    localStorage.removeItem("turboUploaderProfile")
+    setShowWalletOptions(true)
+    setShowProfileMenu(false)
   }
 
   const copyAddress = () => {
@@ -208,9 +224,9 @@ const App = () => {
       saveProfile(profileName, jwk)
       setWallet(jwk)
       setAddress(address)
+      setWalletType("sponsored") // Add this line
       setShowProfileCreation(false)
       setGeneralError("")
-      // Auto-close any open modals and reset state
       setShowWalletOptions(false)
     } catch (error) {
       const errorMsg = `Error generating wallet: ${error instanceof Error ? error.message : "Unknown error"}`
@@ -233,6 +249,7 @@ const App = () => {
 
         const addr = await window.arweaveWallet.getActiveAddress()
         setAddress(addr)
+        setWalletType("external") // Add this line
         setShowWalletOptions(false)
         setGeneralError("")
       } else {
@@ -408,6 +425,15 @@ const App = () => {
                           {isAddressCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                           <span>{isAddressCopied ? "Copied!" : "Copy"}</span>
                         </button>
+                        {walletType === "external" && (
+                          <button
+                            onClick={disconnectWallet}
+                            className="inline-flex items-center space-x-1 rounded-md bg-orange-100 px-2 py-1 text-xs font-medium text-orange-700 hover:bg-orange-200 transition-colors"
+                          >
+                            <LogOut className="h-3 w-3" />
+                            <span>Disconnect</span>
+                          </button>
+                        )}
                         <button
                           onClick={deleteProfile}
                           className="inline-flex items-center space-x-1 rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-200 transition-colors"
