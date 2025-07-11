@@ -52,6 +52,7 @@ const App = () => {
   const [errorMessage, setErrorMessage] = useState<string>("")
   const [profileName, setProfileName] = useState<string>("")
   const [showProfileCreation, setShowProfileCreation] = useState(false)
+  const [isCreatingProfile, setIsCreatingProfile] = useState(false)
   const [isAddressCopied, setIsAddressCopied] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -76,7 +77,7 @@ const App = () => {
       const { name, wallet } = JSON.parse(savedProfile)
       setProfileName(name)
       setWallet(wallet)
-      setWalletType("sponsored") // Add this line - saved profiles are always sponsored wallets
+      setWalletType("sponsored")
       arweave.wallets.getAddress(wallet).then((addr) => setAddress(addr))
     } else {
       setShowWalletOptions(true)
@@ -94,7 +95,7 @@ const App = () => {
     setWallet(null)
     setAddress("")
     setTurbo(null)
-    setWalletType(null) // Add this line
+    setWalletType(null)
     setShowWalletOptions(true)
   }
 
@@ -103,7 +104,7 @@ const App = () => {
     setAddress("")
     setTurbo(null)
     setProfileName("")
-    setWalletType(null) // Add this line
+    setWalletType(null)
     localStorage.removeItem("turboUploaderProfile")
     setShowWalletOptions(true)
     setShowProfileMenu(false)
@@ -218,19 +219,22 @@ const App = () => {
       setGeneralError("Please enter a profile name")
       return
     }
+    setIsCreatingProfile(true)
     try {
       const jwk = await arweave.wallets.generate()
       const address = await arweave.wallets.getAddress(jwk)
       saveProfile(profileName, jwk)
       setWallet(jwk)
       setAddress(address)
-      setWalletType("sponsored") // Add this line
+      setWalletType("sponsored")
       setShowProfileCreation(false)
       setGeneralError("")
       setShowWalletOptions(false)
     } catch (error) {
       const errorMsg = `Error generating wallet: ${error instanceof Error ? error.message : "Unknown error"}`
       setGeneralError(errorMsg)
+    } finally {
+      setIsCreatingProfile(false)
     }
   }
 
@@ -249,7 +253,7 @@ const App = () => {
 
         const addr = await window.arweaveWallet.getActiveAddress()
         setAddress(addr)
-        setWalletType("external") // Add this line
+        setWalletType("external")
         setShowWalletOptions(false)
         setGeneralError("")
       } else {
@@ -379,7 +383,6 @@ const App = () => {
     }
   }, [wallet])
 
-  // Close profile menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (showProfileMenu && !(event.target as Element).closest(".relative")) {
@@ -395,7 +398,6 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-white text-gray-900 font-sans">
-      {/* Header */}
       <header className="sticky top-0 z-40 w-full border-b border-gray-200 bg-white/80 backdrop-blur-md">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
@@ -411,7 +413,6 @@ const App = () => {
 
             {profileName && (
               <div className="relative">
-                {/* Desktop View */}
                 <div className="hidden md:flex items-center space-x-4">
                   <div className="text-right">
                     <p className="text-sm font-medium">Welcome, {profileName}</p>
@@ -446,7 +447,6 @@ const App = () => {
                   </div>
                 </div>
 
-                {/* Mobile View - Profile Button */}
                 <div className="md:hidden">
                   <button
                     onClick={() => setShowProfileMenu(!showProfileMenu)}
@@ -460,7 +460,6 @@ const App = () => {
                     </div>
                   </button>
 
-                  {/* Mobile Profile Menu */}
                   {showProfileMenu && (
                     <div className="absolute right-0 top-full mt-2 w-80 rounded-lg bg-white border border-gray-200 shadow-lg z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                       <div className="p-4 border-b border-gray-100">
@@ -511,11 +510,9 @@ const App = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {!isUploading && !showTerminal && !showWalletOptions && !showProfileCreation && !showSponsorInput && (
           <div className="max-w-2xl mx-auto space-y-8">
-            {/* Upload Area */}
             <div
               className={`relative border-2 border-dashed rounded-xl p-8 md:p-12 text-center transition-all duration-300 ${
                 dragOver
@@ -571,7 +568,6 @@ const App = () => {
           </div>
         )}
 
-        {/* Upload Progress */}
         {isUploading && (
           <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in duration-500">
             <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -591,7 +587,6 @@ const App = () => {
           </div>
         )}
 
-        {/* Terminal Output */}
         {showTerminal && (
           <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -691,7 +686,6 @@ const App = () => {
           </div>
         )}
 
-        {/* Wallet Options Modal */}
         {showWalletOptions && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
             <div className="w-full max-w-md mx-4 rounded-xl bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-300">
@@ -740,7 +734,6 @@ const App = () => {
           </div>
         )}
 
-        {/* Profile Creation Modal */}
         {showProfileCreation && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
             <div className="w-full max-w-md mx-4 rounded-xl bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-300">
@@ -751,7 +744,8 @@ const App = () => {
                     setShowProfileCreation(false)
                     setGeneralError("")
                   }}
-                  className="rounded-lg p-1 hover:bg-gray-100 transition-colors"
+                  disabled={isCreatingProfile}
+                  className="rounded-lg p-1 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <X className="h-4 w-4 text-gray-500" />
                 </button>
@@ -767,43 +761,54 @@ const App = () => {
                   </div>
                 )}
 
-                <div>
-                  <label htmlFor="profileName" className="block text-sm font-medium text-gray-700 mb-2">
-                    Profile Name
-                  </label>
-                  <input
-                    id="profileName"
-                    type="text"
-                    placeholder="Enter your name"
-                    value={profileName}
-                    onChange={(e) => setProfileName(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
-                  />
-                </div>
+                {isCreatingProfile ? (
+                  <div className="flex flex-col items-center justify-center space-y-4 py-8">
+                    <Loader2 className="h-8 w-8 text-gray-600 animate-spin" />
+                    <p className="text-sm font-medium text-gray-700">Creating Profile...</p>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <label htmlFor="profileName" className="block text-sm font-medium text-gray-700 mb-2">
+                        Profile Name
+                      </label>
+                      <input
+                        id="profileName"
+                        type="text"
+                        placeholder="Enter your name"
+                        value={profileName}
+                        onChange={(e) => setProfileName(e.target.value)}
+                        disabled={isCreatingProfile}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors disabled:opacity-50"
+                      />
+                    </div>
 
-                <div className="flex space-x-3">
-                  <button
-                    onClick={handleProfileCreation}
-                    className="flex-1 rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition-colors"
-                  >
-                    Create Profile
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowProfileCreation(false)
-                      setGeneralError("")
-                    }}
-                    className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
+                    <div className="flex space-x-3">
+                      <button
+                        onClick={handleProfileCreation}
+                        disabled={isCreatingProfile}
+                        className="flex-1 rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Create Profile
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowProfileCreation(false)
+                          setGeneralError("")
+                        }}
+                        disabled={isCreatingProfile}
+                        className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
         )}
 
-        {/* Sponsor Input Modal */}
         {showSponsorInput && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
             <div className="w-full max-w-md mx-4 rounded-xl bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-300">
