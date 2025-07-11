@@ -14,6 +14,7 @@ export default defineConfig({
     alias: {
       // Replace every `import "fs"` with our tiny browser-safe shim
       fs: pathResolve(__dirname, "src/shims/fs.js"),
+      "fs/promises": pathResolve(__dirname, "src/shims/fs-promises.js"),
     },
   },
 })
