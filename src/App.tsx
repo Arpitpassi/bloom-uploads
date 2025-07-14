@@ -41,6 +41,7 @@ const App = () => {
   const [showWalletOptions, setShowWalletOptions] = useState(false)
   const [showSponsorInput, setShowSponsorInput] = useState(false)
   const [sponsorWalletAddress, setSponsorWalletAddress] = useState("")
+  const [savedSponsorAddress, setSavedSponsorAddress] = useState("")
   const [address, setAddress] = useState("")
   const [uploadResult, setUploadResult] = useState<string>("")
   const [showTerminal, setShowTerminal] = useState(false)
@@ -54,6 +55,7 @@ const App = () => {
   const [showProfileCreation, setShowProfileCreation] = useState(false)
   const [isCreatingProfile, setIsCreatingProfile] = useState(false)
   const [isAddressCopied, setIsAddressCopied] = useState(false)
+  const [isSponsorAddressCopied, setIsSponsorAddressCopied] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [generalError, setGeneralError] = useState<string>("")
@@ -74,9 +76,11 @@ const App = () => {
   useEffect(() => {
     const savedProfile = localStorage.getItem("turboUploaderProfile")
     if (savedProfile) {
-      const { name, wallet } = JSON.parse(savedProfile)
+      const { name, wallet, sponsorAddress } = JSON.parse(savedProfile)
       setProfileName(name)
       setWallet(wallet)
+      setSavedSponsorAddress(sponsorAddress || "")
+      setSponsorWalletAddress(sponsorAddress || "")
       setWalletType("sponsored")
       arweave.wallets.getAddress(wallet).then((addr) => setAddress(addr))
     } else {
@@ -84,9 +88,10 @@ const App = () => {
     }
   }, [])
 
-  const saveProfile = (name: string, wallet: JWKInterface) => {
-    localStorage.setItem("turboUploaderProfile", JSON.stringify({ name, wallet }))
+  const saveProfile = (name: string, wallet: JWKInterface, sponsorAddress: string = "") => {
+    localStorage.setItem("turboUploaderProfile", JSON.stringify({ name, wallet, sponsorAddress }))
     setProfileName(name)
+    setSavedSponsorAddress(sponsorAddress)
   }
 
   const deleteProfile = () => {
@@ -96,7 +101,20 @@ const App = () => {
     setAddress("")
     setTurbo(null)
     setWalletType(null)
+    setSavedSponsorAddress("")
+    setSponsorWalletAddress("")
     setShowWalletOptions(true)
+  }
+
+  const deleteSponsorAddress = () => {
+    const savedProfile = localStorage.getItem("turboUploaderProfile")
+    if (savedProfile) {
+      const { name, wallet } = JSON.parse(savedProfile)
+      saveProfile(name, wallet)
+      setSavedSponsorAddress("")
+      setSponsorWalletAddress("")
+    }
+    setShowProfileMenu(false)
   }
 
   const disconnectWallet = () => {
@@ -105,6 +123,8 @@ const App = () => {
     setTurbo(null)
     setProfileName("")
     setWalletType(null)
+    setSavedSponsorAddress("")
+    setSponsorWalletAddress("")
     localStorage.removeItem("turboUploaderProfile")
     setShowWalletOptions(true)
     setShowProfileMenu(false)
@@ -115,6 +135,15 @@ const App = () => {
       navigator.clipboard.writeText(address).then(() => {
         setIsAddressCopied(true)
         setTimeout(() => setIsAddressCopied(false), 2000)
+      })
+    }
+  }
+
+  const copySponsorAddress = () => {
+    if (savedSponsorAddress) {
+      navigator.clipboard.writeText(savedSponsorAddress).then(() => {
+        setIsSponsorAddressCopied(true)
+        setTimeout(() => setIsSponsorAddressCopied(false), 2000)
       })
     }
   }
@@ -223,7 +252,7 @@ const App = () => {
     try {
       const jwk = await arweave.wallets.generate()
       const address = await arweave.wallets.getAddress(jwk)
-      saveProfile(profileName, jwk)
+      saveProfile(profileName, jwk, savedSponsorAddress)
       setWallet(jwk)
       setAddress(address)
       setWalletType("sponsored")
@@ -264,11 +293,21 @@ const App = () => {
     }
   }
 
+  const validateArweaveAddress = (addr: string): boolean => {
+    return /^[a-zA-Z0-9_-]{43}$/.test(addr)
+  }
+
   const handleUploadClick = () => {
-    if (wallet) {
-      setShowSponsorInput(true)
-    } else {
+    if (!wallet) {
       setShowWalletOptions(true)
+      return
+    }
+    // If a sponsor address is already saved, use it and proceed to upload
+    if (savedSponsorAddress && walletType === "sponsored") {
+      setSponsorWalletAddress(savedSponsorAddress)
+      handleUpload()
+    } else {
+      setShowSponsorInput(true)
     }
   }
 
@@ -283,6 +322,11 @@ const App = () => {
       return
     }
 
+    if (sponsorWalletAddress && !validateArweaveAddress(sponsorWalletAddress)) {
+      setGeneralError("Invalid sponsor wallet address. Must be a valid 43-character Arweave address.")
+      return
+    }
+
     setIsUploading(true)
     setGeneralError("")
     setUploadStatus("Preparing upload...")
@@ -291,6 +335,15 @@ const App = () => {
     )
 
     try {
+      // Save sponsor address if provided and using sponsored wallet
+      if (sponsorWalletAddress && walletType === "sponsored") {
+        const savedProfile = localStorage.getItem("turboUploaderProfile")
+        if (savedProfile) {
+          const { name, wallet } = JSON.parse(savedProfile)
+          saveProfile(name, wallet, sponsorWalletAddress)
+        }
+      }
+
       const uploadOptions = {
         fileStreamFactory: () => selectedFile.stream(),
         fileSizeFactory: () => selectedFile.size,
@@ -407,103 +460,95 @@ const App = () => {
               </div>
               <div>
                 <h1 className="text-xl font-semibold tracking-tight">Bloom Uploads</h1>
-                <p className="text-sm text-gray-500">Powered by Arweave</p>
+                <p className="text-sm text-gray-500">Powered by Turbo</p>
               </div>
             </div>
 
             {profileName && (
               <div className="relative">
-                <div className="hidden md:flex items-center space-x-4">
-                  <div className="text-right">
-                    <p className="text-sm font-medium">Welcome, {profileName}</p>
-                    {address && (
-                      <div className="flex items-center space-x-2">
-                        <p className="text-xs text-gray-500 font-mono truncate max-w-[200px]">{address}</p>
-                        <button
-                          onClick={copyAddress}
-                          className="inline-flex items-center space-x-1 rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 transition-colors"
-                        >
-                          {isAddressCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                          <span>{isAddressCopied ? "Copied!" : "Copy"}</span>
-                        </button>
-                        {walletType === "external" && (
-                          <button
-                            onClick={disconnectWallet}
-                            className="inline-flex items-center space-x-1 rounded-md bg-orange-100 px-2 py-1 text-xs font-medium text-orange-700 hover:bg-orange-200 transition-colors"
-                          >
-                            <LogOut className="h-3 w-3" />
-                            <span>Disconnect</span>
-                          </button>
-                        )}
-                        <button
-                          onClick={deleteProfile}
-                          className="inline-flex items-center space-x-1 rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-200 transition-colors"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                          <span>Delete</span>
-                        </button>
-                      </div>
-                    )}
+                <button
+                  onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  className="flex items-center space-x-2 rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors"
+                >
+                  <span>Profile</span>
+                  <div className="flex flex-col space-y-1">
+                    <div className="w-4 h-0.5 bg-gray-600 transition-all duration-200"></div>
+                    <div className="w-4 h-0.5 bg-gray-600 transition-all duration-200"></div>
+                    <div className="w-4 h-0.5 bg-gray-600 transition-all duration-200"></div>
                   </div>
-                </div>
+                </button>
 
-                <div className="md:hidden">
-                  <button
-                    onClick={() => setShowProfileMenu(!showProfileMenu)}
-                    className="flex items-center space-x-2 rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors"
-                  >
-                    <span>Profile</span>
-                    <div className="flex flex-col space-y-1">
-                      <div className="w-4 h-0.5 bg-gray-600 transition-all duration-200"></div>
-                      <div className="w-4 h-0.5 bg-gray-600 transition-all duration-200"></div>
-                      <div className="w-4 h-0.5 bg-gray-600 transition-all duration-200"></div>
-                    </div>
-                  </button>
-
-                  {showProfileMenu && (
-                    <div className="absolute right-0 top-full mt-2 w-80 rounded-lg bg-white border border-gray-200 shadow-lg z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                      <div className="p-4 border-b border-gray-100">
-                        <p className="text-sm font-medium text-gray-900">Welcome, {profileName}</p>
-                        {address && (
-                          <div className="mt-2">
-                            <p className="text-xs text-gray-500 mb-2">Wallet Address:</p>
-                            <div className="bg-gray-50 rounded-md p-2 break-all">
-                              <p className="text-xs font-mono text-gray-700">{address}</p>
-                            </div>
+                {showProfileMenu && (
+                  <div className="absolute right-0 top-full mt-2 w-80 rounded-lg bg-white border border-gray-200 shadow-lg z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="p-4 border-b border-gray-100">
+                      <p className="text-sm font-medium text-gray-900">Welcome, {profileName}</p>
+                      {address && (
+                        <div className="mt-2">
+                          <p className="text-xs text-gray-500 mb-2">Wallet Address:</p>
+                          <div className="bg-gray-50 rounded-md p-2 break-all flex items-center justify-between">
+                            <p className="text-xs font-mono text-gray-700">{address}</p>
+                            <button
+                              onClick={copyAddress}
+                              className="rounded-md bg-gray-100 p-1 text-gray-700 hover:bg-gray-200 transition-colors"
+                            >
+                              {isAddressCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                            </button>
                           </div>
-                        )}
-                      </div>
+                        </div>
+                      )}
+                      {savedSponsorAddress && walletType === "sponsored" && (
+                        <div className="mt-2">
+                          <p className="text-xs text-gray-500 mb-2">Sponsor Wallet:</p>
+                          <div className="bg-gray-50 rounded-md p-2 break-all flex items-center justify-between">
+                            <p className="text-xs font-mono text-gray-700">{savedSponsorAddress}</p>
+                            <button
+                              onClick={copySponsorAddress}
+                              className="rounded-md bg-gray-100 p-1 text-gray-700 hover:bg-gray-200 transition-colors"
+                            >
+                              {isSponsorAddressCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
-                      <div className="p-2">
+                    <div className="p-2">
+                      {walletType === "external" && (
                         <button
                           onClick={() => {
-                            copyAddress()
+                            disconnectWallet()
                             setShowProfileMenu(false)
                           }}
-                          className="w-full flex items-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+                          className="w-full flex items-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-orange-700 hover:bg-orange-50 transition-colors"
                         >
-                          {isAddressCopied ? (
-                            <Check className="h-4 w-4 text-green-600" />
-                          ) : (
-                            <Copy className="h-4 w-4" />
-                          )}
-                          <span>{isAddressCopied ? "Address Copied!" : "Copy Address"}</span>
+                          <LogOut className="h-4 w-4" />
+                          <span>Disconnect Wallet</span>
                         </button>
+                      )}
 
+                      <button
+                        onClick={() => {
+                          deleteProfile()
+                          setShowProfileMenu(false)
+                        }}
+                        className="w-full flex items-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span>Delete Profile</span>
+                      </button>
+
+                      {savedSponsorAddress && walletType === "sponsored" && (
                         <button
-                          onClick={() => {
-                            deleteProfile()
-                            setShowProfileMenu(false)
-                          }}
+                          onClick={deleteSponsorAddress}
                           className="w-full flex items-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 transition-colors"
                         >
                           <Trash2 className="h-4 w-4" />
-                          <span>Delete Profile</span>
+                          <span>Remove Sponsor Wallet</span>
                         </button>
-                      </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
