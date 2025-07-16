@@ -1,0 +1,501 @@
+import { useState, useEffect, useRef } from "react"
+import {
+  FileText,
+  ImageIcon,
+  Music,
+  Video,
+  File,
+} from "lucide-react"
+import { ArconnectSigner, ArweaveSigner, type TurboAuthenticatedClient, TurboFactory } from "@ardrive/turbo-sdk/web"
+import type { JWKInterface } from "arweave/node/lib/wallet"
+import type React from "react"
+
+type TurboSigner = ArconnectSigner | ArweaveSigner
+
+export const useAppLogic = (arweave: any) => {
+  const [wallet, setWallet] = useState<JWKInterface | Window["arweaveWallet"] | null>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [uploadStatus, setUploadStatus] = useState<string>("")
+  const [isUploading, setIsUploading] = useState(false)
+  const [showWalletOptions, setShowWalletOptions] = useState(false)
+  const [showSponsorInput, setShowSponsorInput] = useState(false)
+  const [sponsorWalletAddress, setSponsorWalletAddress] = useState("")
+  const [savedSponsorAddress, setSavedSponsorAddress] = useState("")
+  const [address, setAddress] = useState("")
+  const [uploadResult, setUploadResult] = useState<string>("")
+  const [showTerminal, setShowTerminal] = useState(false)
+  const [turbo, setTurbo] = useState<TurboAuthenticatedClient | null>(null)
+  const [textContent, setTextContent] = useState<string>("")
+  const [displayedText, setDisplayedText] = useState<string>("")
+  const [isTextAnimating, setIsTextAnimating] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string>("")
+  const [profileName, setProfileName] = useState<string>("")
+  const [showProfileCreation, setShowProfileCreation] = useState(false)
+  const [isCreatingProfile, setIsCreatingProfile] = useState(false)
+  const [isAddressCopied, setIsAddressCopied] = useState(false)
+  const [isSponsorAddressCopied, setIsSponsorAddressCopied] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const [generalError, setGeneralError] = useState<string>("")
+  const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [walletType, setWalletType] = useState<"sponsored" | "external" | null>(null)
+
+  // Mobile detection effect
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+
+    return () => window.removeEventListener("resize", checkMobile)
+  }, [])
+
+  // Profile loading effect
+  useEffect(() => {
+    const savedProfile = localStorage.getItem("turboUploaderProfile")
+    if (savedProfile) {
+      const { name, wallet, sponsorAddress } = JSON.parse(savedProfile)
+      setProfileName(name)
+      setWallet(wallet)
+      setSavedSponsorAddress(sponsorAddress || "")
+      setSponsorWalletAddress(sponsorAddress || "")
+      setWalletType("sponsored")
+      arweave.wallets.getAddress(wallet).then((addr: React.SetStateAction<string>) => setAddress(addr))
+    } else {
+      setShowWalletOptions(true)
+    }
+  }, [])
+
+  // Turbo client initialization effect
+  useEffect(() => {
+    if (wallet) {
+      setTurbo(
+        TurboFactory.authenticated({
+          signer: "connect" in wallet ? new ArconnectSigner(wallet) : new ArweaveSigner(wallet),
+          token: "arweave",
+        })
+      )
+    }
+  }, [wallet])
+
+  // Profile menu outside click effect
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showProfileMenu && !(event.target as Element).closest(".relative")) {
+        setShowProfileMenu(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [showProfileMenu])
+
+  // Utility functions
+  const saveProfile = (name: string, wallet: JWKInterface, sponsorAddress: string = "") => {
+    localStorage.setItem("turboUploaderProfile", JSON.stringify({ name, wallet, sponsorAddress }))
+    setProfileName(name)
+    setSavedSponsorAddress(sponsorAddress)
+  }
+
+  const deleteProfile = () => {
+    localStorage.removeItem("turboUploaderProfile")
+    setProfileName("")
+    setWallet(null)
+    setAddress("")
+    setTurbo(null)
+    setWalletType(null)
+    setSavedSponsorAddress("")
+    setSponsorWalletAddress("")
+    setShowWalletOptions(true)
+  }
+
+  const deleteSponsorAddress = () => {
+    const savedProfile = localStorage.getItem("turboUploaderProfile")
+    if (savedProfile) {
+      const { name, wallet } = JSON.parse(savedProfile)
+      saveProfile(name, wallet)
+      setSavedSponsorAddress("")
+      setSponsorWalletAddress("")
+    }
+  }
+
+  const disconnectWallet = () => {
+    setWallet(null)
+    setAddress("")
+    setTurbo(null)
+    setProfileName("")
+    setWalletType(null)
+    setSavedSponsorAddress("")
+    setSponsorWalletAddress("")
+    localStorage.removeItem("turboUploaderProfile")
+    setShowWalletOptions(true)
+  }
+
+  const copyAddress = () => {
+    if (address) {
+      navigator.clipboard.writeText(address).then(() => {
+        setIsAddressCopied(true)
+        setTimeout(() => setIsAddressCopied(false), 2000)
+      })
+    }
+  }
+
+  const copySponsorAddress = () => {
+    if (savedSponsorAddress) {
+      navigator.clipboard.writeText(savedSponsorAddress).then(() => {
+        setIsSponsorAddressCopied(true)
+        setTimeout(() => setIsSponsorAddressCopied(false), 2000)
+      })
+    }
+  }
+
+  const readTextFile = async (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = (e) => resolve((e.target?.result as string) || "")
+      reader.readAsText(file)
+    })
+  }
+
+  const animateTextContent = (text: string) => {
+    setIsTextAnimating(true)
+    setDisplayedText("")
+
+    for (let i = 0; i <= text.length; i++) {
+      setTimeout(() => {
+        setDisplayedText(text.slice(0, i))
+        if (i === text.length) {
+          setIsTextAnimating(false)
+        }
+      }, i * 20)
+    }
+  }
+
+  const handleFileSelect = async (file: File) => {
+    setSelectedFile(file)
+    setUploadStatus("")
+    setUploadResult("")
+    setErrorMessage("")
+    setShowTerminal(false)
+    setTextContent("")
+    setDisplayedText("")
+
+    if (file.type.startsWith("text/")) {
+      const text = await readTextFile(file)
+      setTextContent(text.slice(0, 500))
+    } else {
+      setTextContent(`Selected file: ${file.name}\nSize: ${formatFileSize(file.size)}`)
+    }
+  }
+
+  const getFileIcon = (file: File) => {
+    const fileType = file.type.split("/")[0]
+    switch (fileType) {
+      case "image":
+        return <ImageIcon className="w-6 h-6 text-blue-600" />
+      case "video":
+        return <Video className="w-6 h-6 text-purple-600" />
+      case "audio":
+        return <Music className="w-6 h-6 text-green-600" />
+      case "text":
+        return <FileText className="w-6 h-6 text-orange-600" />
+      default:
+        return <File className="w-6 h-6 text-gray-600" />
+    }
+  }
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return "0 Bytes"
+    const k = 1024
+    const sizes = ["Bytes", "KB", "MB", "GB"]
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
+  }
+
+  const generateRandomJwk = async () => {
+    setShowProfileCreation(true)
+    setShowWalletOptions(false)
+  }
+
+  const handleProfileCreation = async (name: string) => {
+    if (!name) {
+      setGeneralError("Please enter a profile name")
+      return
+    }
+    setIsCreatingProfile(true)
+    try {
+      const jwk = await arweave.wallets.generate()
+      const address = await arweave.wallets.getAddress(jwk)
+      saveProfile(name, jwk, savedSponsorAddress)
+      setWallet(jwk)
+      setAddress(address)
+      setWalletType("sponsored")
+      setShowProfileCreation(false)
+      setGeneralError("")
+      setShowWalletOptions(false)
+    } catch (error) {
+      const errorMsg = `Error generating wallet: ${error instanceof Error ? error.message : "Unknown error"}`
+      setGeneralError(errorMsg)
+    } finally {
+      setIsCreatingProfile(false)
+    }
+  }
+
+  const connectWallet = async () => {
+    try {
+      if (!window.arweaveWallet) {
+        setGeneralError("Arweave wallet not found. Please install an Arweave-compatible wallet.")
+        return
+      }
+
+      const requiredPermissions = ["ACCESS_ADDRESS", "ACCESS_PUBLIC_KEY", "SIGN_TRANSACTION", "SIGNATURE"]
+    
+
+      // Check if we have the required permissions
+      let currentPermissions: string[] = []
+      try {
+        if (typeof window.arweaveWallet.getPermissions === 'function') {
+          currentPermissions = await window.arweaveWallet.getPermissions()
+        }
+      } catch (permError) {
+        // If getPermissions fails, we'll assume we have permissions after connect
+        console.warn("Could not get permissions, assuming they were granted:", permError)
+      }
+
+      // Check if we have all required permissions (if getPermissions worked)
+      if (currentPermissions.length > 0) {
+        const missingPermissions = requiredPermissions.filter(
+          (permission) => !currentPermissions.includes(permission)
+        )
+        
+        if (missingPermissions.length > 0) {
+          setGeneralError(`Missing required permissions: ${missingPermissions.join(", ")}`)
+          return
+        }
+      }
+
+      // Try to get the wallet address
+      let addr: string
+      try {
+        addr = await window.arweaveWallet.getActiveAddress()
+      } catch (addressError) {
+        setGeneralError(`Error getting wallet address: ${addressError instanceof Error ? addressError.message : "Unknown error"}`)
+        return
+      }
+
+      setWallet(window.arweaveWallet)
+      setAddress(addr)
+      setWalletType("external")
+      setShowWalletOptions(false)
+      setGeneralError("")
+      
+    } catch (error) {
+      setGeneralError(`Error connecting wallet: ${error instanceof Error ? error.message : "Unknown error"}`)
+    }
+  }
+
+  const validateArweaveAddress = (addr: string): boolean => {
+    return /^[a-zA-Z0-9_-]{43}$/.test(addr)
+  }
+
+  const handleUploadClick = () => {
+    if (!wallet) {
+      setShowWalletOptions(true)
+      return
+    }
+    if (savedSponsorAddress && walletType === "sponsored") {
+      setSponsorWalletAddress(savedSponsorAddress)
+      handleUpload()
+    } else {
+      setShowSponsorInput(true)
+    }
+  }
+
+  const handleUpload = async () => {
+    if (!selectedFile || !wallet || !turbo) {
+      const errorMsg = !selectedFile
+        ? "No file selected"
+        : !wallet
+        ? "No wallet connected"
+        : "Turbo client not initialized"
+      setGeneralError(errorMsg)
+      return
+    }
+
+    if (sponsorWalletAddress && !validateArweaveAddress(sponsorWalletAddress)) {
+      setGeneralError("Invalid sponsor wallet address. Must be a valid 43-character Arweave address.")
+      return
+    }
+
+    setIsUploading(true)
+    setGeneralError("")
+    setUploadStatus("Preparing upload...")
+    animateTextContent(
+      `Preparing upload...\nConnecting to Arweave network...\nSigning transaction...\nUploading to Arweave...`,
+    )
+
+    try {
+      if (sponsorWalletAddress && walletType === "sponsored") {
+        const savedProfile = localStorage.getItem("turboUploaderProfile")
+        if (savedProfile) {
+          const { name, wallet } = JSON.parse(savedProfile)
+          saveProfile(name, wallet, sponsorWalletAddress)
+        }
+      }
+
+      const uploadOptions = {
+        fileStreamFactory: () => selectedFile.stream(),
+        fileSizeFactory: () => selectedFile.size,
+        dataItemOpts: {
+          tags: [
+            { name: "App-Name", value: "TurboUploader" },
+            { name: "anchor", value: new Date().toISOString() },
+            { name: "Content-Type", value: selectedFile.type || "application/octet-stream" },
+          ],
+          ...(sponsorWalletAddress ? { paidBy: sponsorWalletAddress } : {}),
+        },
+        events: {
+          onSigningProgress: () => {
+            setUploadStatus("Signing transaction...")
+          },
+          onSigningError: (error: Error) => {
+            const errorMsg = `Signing error: ${error.message}`
+            setUploadStatus(errorMsg)
+            setErrorMessage(errorMsg)
+            animateTextContent(errorMsg)
+            setIsUploading(false)
+            setShowTerminal(true)
+          },
+          onUploadProgress: () => {
+            setUploadStatus("Uploading to Arweave...")
+          },
+          onUploadError: (error: Error) => {
+            let errorMsg = `Upload error: ${error.message}`
+            if (error.message.includes("insufficient balance")) {
+              errorMsg = "Upload failed: Insufficient balance in wallet or sponsor wallet"
+            } else if (error.message.includes("network")) {
+              errorMsg = "Upload failed: Network connection issue. Please check your internet connection."
+            }
+            setUploadStatus(errorMsg)
+            setErrorMessage(errorMsg)
+            animateTextContent(errorMsg)
+            setIsUploading(false)
+            setShowTerminal(true)
+          },
+        },
+      }
+
+      const upload = await turbo.uploadFile(uploadOptions)
+
+      if (upload && upload.id) {
+        const arweaveUrl = `https://arweave.net/${upload.id}`
+        setUploadResult(arweaveUrl)
+        setUploadStatus("Upload completed successfully!")
+        setErrorMessage("")
+        animateTextContent(`Upload completed successfully!\nTransaction ID: ${upload.id}`)
+        setTimeout(() => {
+          setIsUploading(false)
+          setShowTerminal(true)
+        }, 1000)
+      } else {
+        const errorMsg = "Upload failed: No transaction ID received"
+        setUploadStatus(errorMsg)
+        setErrorMessage(errorMsg)
+        animateTextContent(errorMsg)
+        setIsUploading(false)
+        setShowTerminal(true)
+      }
+    } catch (error) {
+      let errorMsg = `Upload failed: ${error instanceof Error ? error.message : "Unknown error"}`
+      if (error instanceof Error) {
+        if (error.message.includes("timeout") || error.message.includes("network")) {
+          errorMsg = "Upload failed: Network timeout or connection issue"
+        } else if (error.message.includes("invalid signature")) {
+          errorMsg = "Upload failed: Invalid transaction signature"
+        } else if (error.message.includes("balance")) {
+          errorMsg = "Upload failed: Insufficient balance in wallet or sponsor wallet"
+        }
+      }
+      setUploadStatus(errorMsg)
+      setErrorMessage(errorMsg)
+      animateTextContent(errorMsg)
+      setIsUploading(false)
+      setShowTerminal(true)
+    }
+  }
+
+  return {
+    // State
+    wallet,
+    selectedFile,
+    uploadStatus,
+    isUploading,
+    showWalletOptions,
+    showSponsorInput,
+    sponsorWalletAddress,
+    savedSponsorAddress,
+    address,
+    uploadResult,
+    showTerminal,
+    turbo,
+    textContent,
+    displayedText,
+    isTextAnimating,
+    errorMessage,
+    profileName,
+    showProfileCreation,
+    isCreatingProfile,
+    isAddressCopied,
+    isSponsorAddressCopied,
+    isMobile,
+    generalError,
+    showProfileMenu,
+    walletType,
+    
+    // Setters
+    setWallet,
+    setSelectedFile,
+    setUploadStatus,
+    setIsUploading,
+    setShowWalletOptions,
+    setShowSponsorInput,
+    setSponsorWalletAddress,
+    setSavedSponsorAddress,
+    setAddress,
+    setUploadResult,
+    setShowTerminal,
+    setTurbo,
+    setTextContent,
+    setDisplayedText,
+    setIsTextAnimating,
+    setErrorMessage,
+    setProfileName,
+    setShowProfileCreation,
+    setIsCreatingProfile,
+    setIsAddressCopied,
+    setIsSponsorAddressCopied,
+    setIsMobile,
+    setGeneralError,
+    setShowProfileMenu,
+    setWalletType,
+    
+    // Functions
+    saveProfile,
+    deleteProfile,
+    deleteSponsorAddress,
+    disconnectWallet,
+    copyAddress,
+    copySponsorAddress,
+    handleFileSelect,
+    getFileIcon,
+    formatFileSize,
+    generateRandomJwk,
+    handleProfileCreation,
+    connectWallet,
+    handleUploadClick,
+    handleUpload,
+  }
+}
