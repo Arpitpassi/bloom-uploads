@@ -7,6 +7,7 @@ interface WalletOptionsModalProps {
   onConnectExternal: () => void
   error: string
   isMobile: boolean
+  hasSponsoredWallet: boolean
 }
 
 const WalletOptionsModal: React.FC<WalletOptionsModalProps> = ({
@@ -15,6 +16,7 @@ const WalletOptionsModal: React.FC<WalletOptionsModalProps> = ({
   onConnectExternal,
   error,
   isMobile,
+  hasSponsoredWallet,
 }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -44,7 +46,7 @@ const WalletOptionsModal: React.FC<WalletOptionsModalProps> = ({
             <span>Create Sponsored Wallet</span>
           </button>
 
-          {!isMobile && (
+          {!isMobile && !hasSponsoredWallet && (
             <button
               onClick={onConnectExternal}
               className="w-full flex items-center justify-center space-x-2 rounded-lg bg-black px-4 py-3 text-sm font-medium text-white hover:bg-gray-800 transition-colors"

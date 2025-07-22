@@ -51,3 +51,4 @@ yarn-error.log*
 *.lock
 *codebase.md
 node_modules
+package-lock.json

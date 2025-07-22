@@ -10,6 +10,9 @@
   },
   "dependencies": {
     "@ardrive/turbo-sdk": "latest",
+    "@arweave-wallet-kit/browser-wallet-strategy": "^0.1.1",
+    "@arweave-wallet-kit/react": "^0.3.2",
+    "@arweave-wallet-kit/wander-strategy": "^0.1.2",
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "latest",
     "@radix-ui/react-alert-dialog": "latest",
@@ -38,6 +41,7 @@
     "@radix-ui/react-toggle": "latest",
     "@radix-ui/react-toggle-group": "latest",
     "@radix-ui/react-tooltip": "latest",
+    "@vela-ventures/aosync-strategy": "^1.0.13",
     "@vitejs/plugin-react": "latest",
     "arweave": "latest",
     "autoprefixer": "^10.4.20",

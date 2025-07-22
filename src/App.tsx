@@ -43,7 +43,6 @@ const arweave = new Arweave({
 
 const App = () => {
   const {
-    // State
     wallet,
     selectedFile,
     uploadStatus,
@@ -69,8 +68,8 @@ const App = () => {
     generalError,
     showProfileMenu,
     walletType,
+    hasSponsoredWallet,
     
-    // Setters
     setShowWalletOptions,
     setGeneralError,
     setShowProfileCreation,
@@ -85,7 +84,6 @@ const App = () => {
     setProfileName,
     setShowProfileMenu,
     
-    // Functions
     saveProfile,
     deleteProfile,
     deleteSponsorAddress,
@@ -128,13 +126,15 @@ const App = () => {
     )
   } else {
     mainContent = (
-      <FileSelector
-        selectedFile={selectedFile}
-        onFileSelect={handleFileSelect}
-        onUpload={handleUploadClick}
-        getFileIcon={getFileIcon}
-        formatFileSize={formatFileSize}
-      />
+      <div className="space-y-6">
+        <FileSelector
+          selectedFile={selectedFile}
+          onFileSelect={handleFileSelect}
+          onUpload={handleUploadClick}
+          getFileIcon={getFileIcon}
+          formatFileSize={formatFileSize}
+        />
+      </div>
     )
   }
 
@@ -154,6 +154,7 @@ const App = () => {
         savedSponsorAddress={savedSponsorAddress}
         walletType={walletType}
         deleteSponsorAddress={deleteSponsorAddress}
+        connectWallet={() => setShowWalletOptions(true)}
       />
 
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">{mainContent}</main>
@@ -168,6 +169,7 @@ const App = () => {
           onConnectExternal={connectWallet}
           error={generalError}
           isMobile={isMobile}
+          hasSponsoredWallet={hasSponsoredWallet}
         />
       )}
 

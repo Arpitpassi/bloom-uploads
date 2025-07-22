@@ -9,6 +9,8 @@ import {
 import { ArconnectSigner, ArweaveSigner, type TurboAuthenticatedClient, TurboFactory } from "@ardrive/turbo-sdk/web"
 import type { JWKInterface } from "arweave/node/lib/wallet"
 import type React from "react"
+import { useConnection } from "@arweave-wallet-kit/react";
+import { useUser } from "./useUser"
 
 type TurboSigner = ArconnectSigner | ArweaveSigner
 
@@ -38,6 +40,10 @@ export const useAppLogic = (arweave: any) => {
   const [generalError, setGeneralError] = useState<string>("")
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [walletType, setWalletType] = useState<"sponsored" | "external" | null>(null)
+  const [hasSponsoredWallet, setHasSponsoredWallet] = useState(false)
+
+  const { connect, disconnect } = useConnection();
+  const { connected } = useUser();
 
   // Mobile detection effect
   useEffect(() => {
@@ -61,9 +67,8 @@ export const useAppLogic = (arweave: any) => {
       setSavedSponsorAddress(sponsorAddress || "")
       setSponsorWalletAddress(sponsorAddress || "")
       setWalletType("sponsored")
+      setHasSponsoredWallet(true)
       arweave.wallets.getAddress(wallet).then((addr: React.SetStateAction<string>) => setAddress(addr))
-    } else {
-      setShowWalletOptions(true)
     }
   }, [])
 
@@ -93,6 +98,20 @@ export const useAppLogic = (arweave: any) => {
     }
   }, [showProfileMenu])
 
+  // Wallet state sync with Arweave Wallet Kit
+  useEffect(() => {
+    if (connected) {
+      setWallet(window.arweaveWallet);
+      setWalletType("external");
+      window.arweaveWallet.getActiveAddress().then((addr: string) => setAddress(addr));
+      setShowWalletOptions(false);
+    } else if (walletType === "external") {
+      setWallet(null);
+      setAddress("");
+      setWalletType(null);
+    }
+  }, [connected]);
+
   // Utility functions
   const saveProfile = (name: string, wallet: JWKInterface, sponsorAddress: string = "") => {
     localStorage.setItem("turboUploaderProfile", JSON.stringify({ name, wallet, sponsorAddress }))
@@ -107,9 +126,10 @@ export const useAppLogic = (arweave: any) => {
     setAddress("")
     setTurbo(null)
     setWalletType(null)
+    setHasSponsoredWallet(false)
     setSavedSponsorAddress("")
     setSponsorWalletAddress("")
-    setShowWalletOptions(true)
+    setShowWalletOptions(false)
   }
 
   const deleteSponsorAddress = () => {
@@ -122,16 +142,20 @@ export const useAppLogic = (arweave: any) => {
     }
   }
 
-  const disconnectWallet = () => {
-    setWallet(null)
-    setAddress("")
-    setTurbo(null)
-    setProfileName("")
-    setWalletType(null)
-    setSavedSponsorAddress("")
-    setSponsorWalletAddress("")
-    localStorage.removeItem("turboUploaderProfile")
-    setShowWalletOptions(true)
+  const disconnectWallet = async () => {
+    try {
+      await disconnect();
+      setWallet(null)
+      setAddress("")
+      setTurbo(null)
+      setProfileName("")
+      setWalletType(null)
+      setSavedSponsorAddress("")
+      setSponsorWalletAddress("")
+      setShowWalletOptions(false)
+    } catch (error: any) {
+      setGeneralError(error.message || "Failed to disconnect wallet")
+    }
   }
 
   const copyAddress = () => {
@@ -233,12 +257,12 @@ export const useAppLogic = (arweave: any) => {
       setWallet(jwk)
       setAddress(address)
       setWalletType("sponsored")
+      setHasSponsoredWallet(true)
       setShowProfileCreation(false)
       setGeneralError("")
       setShowWalletOptions(false)
-    } catch (error) {
-      const errorMsg = `Error generating wallet: ${error instanceof Error ? error.message : "Unknown error"}`
-      setGeneralError(errorMsg)
+    } catch (error: any) {
+      setGeneralError(error.message || "Failed to generate wallet")
     } finally {
       setIsCreatingProfile(false)
     }
@@ -246,54 +270,10 @@ export const useAppLogic = (arweave: any) => {
 
   const connectWallet = async () => {
     try {
-      if (!window.arweaveWallet) {
-        setGeneralError("Arweave wallet not found. Please install an Arweave-compatible wallet.")
-        return
-      }
-
-      const requiredPermissions = ["ACCESS_ADDRESS", "ACCESS_PUBLIC_KEY", "SIGN_TRANSACTION", "SIGNATURE"]
-    
-
-      // Check if we have the required permissions
-      let currentPermissions: string[] = []
-      try {
-        if (typeof window.arweaveWallet.getPermissions === 'function') {
-          currentPermissions = await window.arweaveWallet.getPermissions()
-        }
-      } catch (permError) {
-        // If getPermissions fails, we'll assume we have permissions after connect
-        console.warn("Could not get permissions, assuming they were granted:", permError)
-      }
-
-      // Check if we have all required permissions (if getPermissions worked)
-      if (currentPermissions.length > 0) {
-        const missingPermissions = requiredPermissions.filter(
-          (permission) => !currentPermissions.includes(permission)
-        )
-        
-        if (missingPermissions.length > 0) {
-          setGeneralError(`Missing required permissions: ${missingPermissions.join(", ")}`)
-          return
-        }
-      }
-
-      // Try to get the wallet address
-      let addr: string
-      try {
-        addr = await window.arweaveWallet.getActiveAddress()
-      } catch (addressError) {
-        setGeneralError(`Error getting wallet address: ${addressError instanceof Error ? addressError.message : "Unknown error"}`)
-        return
-      }
-
-      setWallet(window.arweaveWallet)
-      setAddress(addr)
-      setWalletType("external")
+      await connect();
       setShowWalletOptions(false)
-      setGeneralError("")
-      
-    } catch (error) {
-      setGeneralError(`Error connecting wallet: ${error instanceof Error ? error.message : "Unknown error"}`)
+    } catch (error: any) {
+      setGeneralError(error.message || "Failed to connect wallet")
     }
   }
 
@@ -408,16 +388,14 @@ export const useAppLogic = (arweave: any) => {
         setIsUploading(false)
         setShowTerminal(true)
       }
-    } catch (error) {
-      let errorMsg = `Upload failed: ${error instanceof Error ? error.message : "Unknown error"}`
-      if (error instanceof Error) {
-        if (error.message.includes("timeout") || error.message.includes("network")) {
-          errorMsg = "Upload failed: Network timeout or connection issue"
-        } else if (error.message.includes("invalid signature")) {
-          errorMsg = "Upload failed: Invalid transaction signature"
-        } else if (error.message.includes("balance")) {
-          errorMsg = "Upload failed: Insufficient balance in wallet or sponsor wallet"
-        }
+    } catch (error: any) {
+      let errorMsg = `Upload failed: ${error.message}`
+      if (error.message.includes("timeout") || error.message.includes("network")) {
+        errorMsg = "Upload failed: Network timeout or connection issue"
+      } else if (error.message.includes("invalid signature")) {
+        errorMsg = "Upload failed: Invalid transaction signature"
+      } else if (error.message.includes("balance")) {
+        errorMsg = "Upload failed: Insufficient balance in wallet or sponsor wallet"
       }
       setUploadStatus(errorMsg)
       setErrorMessage(errorMsg)
@@ -428,7 +406,6 @@ export const useAppLogic = (arweave: any) => {
   }
 
   return {
-    // State
     wallet,
     selectedFile,
     uploadStatus,
@@ -454,8 +431,8 @@ export const useAppLogic = (arweave: any) => {
     generalError,
     showProfileMenu,
     walletType,
+    hasSponsoredWallet,
     
-    // Setters
     setWallet,
     setSelectedFile,
     setUploadStatus,
@@ -481,8 +458,8 @@ export const useAppLogic = (arweave: any) => {
     setGeneralError,
     setShowProfileMenu,
     setWalletType,
+    setHasSponsoredWallet,
     
-    // Functions
     saveProfile,
     deleteProfile,
     deleteSponsorAddress,
