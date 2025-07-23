@@ -1,15 +1,10 @@
-import { useState, useEffect, useRef } from "react"
-import {
-  FileText,
-  ImageIcon,
-  Music,
-  Video,
-  File,
-} from "lucide-react"
-import { ArconnectSigner, ArweaveSigner, type TurboAuthenticatedClient, TurboFactory } from "@ardrive/turbo-sdk/web"
+"use client"
+
+import { useState, useEffect } from "react"
+import { ImageIcon, Video, Music, FileText, File } from "lucide-react"
+import { ArconnectSigner, ArweaveSigner, TurboFactory, type TurboAuthenticatedClient } from "@ardrive/turbo-sdk/web"
 import type { JWKInterface } from "arweave/node/lib/wallet"
-import type React from "react"
-import { useConnection } from "@arweave-wallet-kit/react";
+import { useConnection } from "@arweave-wallet-kit/react"
 import { useUser } from "./useUser"
 
 type TurboSigner = ArconnectSigner | ArweaveSigner
@@ -42,8 +37,8 @@ export const useAppLogic = (arweave: any) => {
   const [walletType, setWalletType] = useState<"sponsored" | "external" | null>(null)
   const [hasSponsoredWallet, setHasSponsoredWallet] = useState(false)
 
-  const { connect, disconnect } = useConnection();
-  const { connected } = useUser();
+  const { connect, disconnect } = useConnection()
+  const { connected } = useUser()
 
   // Mobile detection effect
   useEffect(() => {
@@ -68,9 +63,9 @@ export const useAppLogic = (arweave: any) => {
       setSponsorWalletAddress(sponsorAddress || "")
       setWalletType("sponsored")
       setHasSponsoredWallet(true)
-      arweave.wallets.getAddress(wallet).then((addr: React.SetStateAction<string>) => setAddress(addr))
+      arweave.wallets.getAddress(wallet).then((addr: string) => setAddress(addr))
     }
-  }, [])
+  }, [arweave])
 
   // Turbo client initialization effect
   useEffect(() => {
@@ -101,16 +96,16 @@ export const useAppLogic = (arweave: any) => {
   // Wallet state sync with Arweave Wallet Kit
   useEffect(() => {
     if (connected) {
-      setWallet(window.arweaveWallet);
-      setWalletType("external");
-      window.arweaveWallet.getActiveAddress().then((addr: string) => setAddress(addr));
-      setShowWalletOptions(false);
+      setWallet(window.arweaveWallet)
+      setWalletType("external")
+      window.arweaveWallet.getActiveAddress().then((addr: string) => setAddress(addr))
+      setShowWalletOptions(false)
     } else if (walletType === "external") {
-      setWallet(null);
-      setAddress("");
-      setWalletType(null);
+      setWallet(null)
+      setAddress("")
+      setWalletType(null)
     }
-  }, [connected]);
+  }, [connected])
 
   // Utility functions
   const saveProfile = (name: string, wallet: JWKInterface, sponsorAddress: string = "") => {
@@ -144,7 +139,7 @@ export const useAppLogic = (arweave: any) => {
 
   const disconnectWallet = async () => {
     try {
-      await disconnect();
+      await disconnect()
       setWallet(null)
       setAddress("")
       setTurbo(null)
@@ -270,7 +265,7 @@ export const useAppLogic = (arweave: any) => {
 
   const connectWallet = async () => {
     try {
-      await connect();
+      await connect()
       setShowWalletOptions(false)
     } catch (error: any) {
       setGeneralError(error.message || "Failed to connect wallet")
@@ -451,7 +446,7 @@ export const useAppLogic = (arweave: any) => {
     setErrorMessage,
     setProfileName,
     setShowProfileCreation,
-    setIsCreatingProfile,
+    setIsCreatingProfile, // Added to fix Errors 1 and 2
     setIsAddressCopied,
     setIsSponsorAddressCopied,
     setIsMobile,

@@ -32,6 +32,11 @@ import FileSelector from "../components/FileSelector"
 import UploadingIndicator from "../components/UploadingIndicator"
 import UploadResults from "../components/UploadResults"
 import { useAppLogic } from "../hooks/applogic"
+import { GoogleLogin, googleLogout } from '@react-oauth/google'
+import { encryptJWK, decryptJWK } from "../lib/cryptoUtils"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog"
+import { Input } from "../components/ui/input"
+import { Button } from "../components/ui/button"
 
 TurboFactory.setLogLevel("debug")
 
@@ -83,6 +88,12 @@ const App = () => {
     setErrorMessage,
     setProfileName,
     setShowProfileMenu,
+    setWallet,
+    setAddress,
+    setWalletType,
+    setHasSponsoredWallet,
+    setSavedSponsorAddress,
+    setIsCreatingProfile,
     
     saveProfile,
     deleteProfile,
@@ -100,10 +111,148 @@ const App = () => {
     handleUpload,
   } = useAppLogic(arweave)
 
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [unlockedWallet, setUnlockedWallet] = useState<JWKInterface | null>(null)
+  const [showPassphraseModal, setShowPassphraseModal] = useState(false)
+  const [passphrase, setPassphrase] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Load profile for sponsored wallet
+  useEffect(() => {
+    const savedProfile = localStorage.getItem("turboUploaderProfile")
+    if (savedProfile) {
+      const { name, userId, sponsorAddress } = JSON.parse(savedProfile)
+      setProfileName(name)
+      setUserId(userId)
+      setSavedSponsorAddress(sponsorAddress || "")
+      setSponsorWalletAddress(sponsorAddress || "")
+      setWalletType("sponsored")
+      setHasSponsoredWallet(true)
+      setShowPassphraseModal(true) // Prompt for passphrase to unlock wallet
+    }
+  }, [setProfileName, setUserId, setSavedSponsorAddress, setSponsorWalletAddress, setWalletType, setHasSponsoredWallet])
+
+  // Sync wallet state with unlocked wallet
+  useEffect(() => {
+    if (unlockedWallet) {
+      setWallet(unlockedWallet)
+      arweave.wallets.getAddress(unlockedWallet).then((addr: string) => setAddress(addr))
+    } else if (walletType !== "external") {
+      setWallet(null)
+      setAddress("")
+    }
+  }, [unlockedWallet, setWallet, setAddress, arweave, walletType])
+
+  const handleGoogleSuccess = (response: any) => {
+    const token = response.credential
+    const decoded = JSON.parse(atob(token.split('.')[1]))
+    setIsLoggedIn(true)
+    setUserId(decoded.sub)
+  }
+
+  const handleGoogleFailure = () => {
+    setGeneralError("Google login failed")
+    setShowProfileCreation(false)
+  }
+
+  const handleLogout = () => {
+    googleLogout()
+    setIsLoggedIn(false)
+    setUserId(null)
+    setUnlockedWallet(null)
+    setWallet(null)
+    setAddress("")
+    setShowProfileMenu(false)
+    setWalletType(null)
+    setHasSponsoredWallet(false)
+  }
+
+  const handlePassphraseSubmit = async () => {
+    try {
+      const savedProfile = localStorage.getItem("turboUploaderProfile")
+      if (savedProfile) {
+        const { encryptedJWK, salt, iv } = JSON.parse(savedProfile)
+        const jwk = await decryptJWK(encryptedJWK, salt, iv, passphrase)
+        setUnlockedWallet(jwk)
+        setShowPassphraseModal(false)
+        setPassphrase("")
+      }
+    } catch (error) {
+      setGeneralError("Incorrect passphrase")
+    }
+  }
+
+  const modifiedGenerateRandomJwk = async () => {
+    if (!isLoggedIn) {
+      setShowWalletOptions(false)
+      // Show Google login modal
+      setGeneralError("Please log in with Google to create a sponsored wallet")
+      return
+    }
+    setShowProfileCreation(true)
+    setShowWalletOptions(false)
+  }
+
+  const modifiedHandleProfileCreation = async (name: string) => {
+    if (!name || !passphrase) {
+      setGeneralError("Please enter both a profile name and passphrase")
+      return
+    }
+    if (!isLoggedIn || !userId) {
+      setGeneralError("Please log in with Google first")
+      return
+    }
+    setIsCreatingProfile(true)
+    try {
+      const jwk = await arweave.wallets.generate()
+      const { encryptedData, salt, iv } = await encryptJWK(jwk, passphrase)
+      const address = await arweave.wallets.getAddress(jwk)
+      const profile = {
+        name,
+        encryptedJWK: encryptedData,
+        salt,
+        iv,
+        userId,
+        sponsorAddress: savedSponsorAddress || ""
+      }
+      localStorage.setItem("turboUploaderProfile", JSON.stringify(profile))
+      setProfileName(name)
+      setUnlockedWallet(jwk)
+      setWalletType("sponsored")
+      setHasSponsoredWallet(true)
+      setShowProfileCreation(false)
+      setPassphrase("")
+      setGeneralError("")
+      setShowWalletOptions(false)
+    } catch (error: any) {
+      setGeneralError(error.message || "Failed to generate wallet")
+    } finally {
+      setIsCreatingProfile(false)
+    }
+  }
+
+  const modifiedDisconnectWallet = async () => {
+    try {
+      await disconnectWallet()
+      handleLogout()
+    } catch (error: any) {
+      setGeneralError(error.message || "Failed to disconnect wallet")
+    }
+  }
+
   let mainContent
-  if (isUploading) {
+  if (!isLoggedIn && generalError === "Please log in with Google to create a sponsored wallet") {
+    mainContent = (
+      <div className="max-w-2xl mx-auto text-center space-y-4">
+        <p className="text-lg font-medium">Please log in to create a sponsored wallet</p>
+        <GoogleLogin
+          onSuccess={handleGoogleSuccess}
+          onError={handleGoogleFailure}
+        />
+      </div>
+    )
+  } else if (isUploading) {
     mainContent = <UploadingIndicator displayedText={displayedText} isTextAnimating={isTextAnimating} />
   } else if (showTerminal) {
     mainContent = (
@@ -145,8 +294,11 @@ const App = () => {
         address={address}
         showProfileMenu={showProfileMenu}
         setShowProfileMenu={setShowProfileMenu}
-        deleteProfile={deleteProfile}
-        disconnectWallet={disconnectWallet}
+        deleteProfile={() => {
+          deleteProfile()
+          handleLogout()
+        }}
+        disconnectWallet={modifiedDisconnectWallet}
         copyAddress={copyAddress}
         copySponsorAddress={copySponsorAddress}
         isAddressCopied={isAddressCopied}
@@ -165,7 +317,7 @@ const App = () => {
             setShowWalletOptions(false)
             setGeneralError("")
           }}
-          onCreateSponsored={generateRandomJwk}
+          onCreateSponsored={modifiedGenerateRandomJwk}
           onConnectExternal={connectWallet}
           error={generalError}
           isMobile={isMobile}
@@ -178,12 +330,15 @@ const App = () => {
           onClose={() => {
             setShowProfileCreation(false)
             setGeneralError("")
+            setPassphrase("")
           }}
-          onCreate={handleProfileCreation}
+          onCreate={modifiedHandleProfileCreation}
           isCreating={isCreatingProfile}
           error={generalError}
           profileName={profileName}
           setProfileName={setProfileName}
+          passphrase={passphrase}
+          setPassphrase={setPassphrase}
         />
       )}
 
@@ -193,7 +348,7 @@ const App = () => {
             setShowSponsorInput(false)
             setGeneralError("")
           }}
-          onSubmit={(address: React.SetStateAction<string>) => {
+          onSubmit={(address: string) => {
             setSponsorWalletAddress(address)
             setShowSponsorInput(false)
             handleUpload()
@@ -202,6 +357,38 @@ const App = () => {
           sponsorWalletAddress={sponsorWalletAddress}
           setSponsorWalletAddress={setSponsorWalletAddress}
         />
+      )}
+
+      {showPassphraseModal && (
+        <Dialog open={showPassphraseModal} onOpenChange={setShowPassphraseModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Enter Passphrase</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {generalError && (
+                <div className="flex items-center space-x-2 text-red-700">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>{generalError}</span>
+                </div>
+              )}
+              <Input
+                type="password"
+                placeholder="Enter your passphrase"
+                value={passphrase}
+                onChange={(e) => setPassphrase(e.target.value)}
+              />
+            </div>
+            <DialogFooter>
+              <Button onClick={handlePassphraseSubmit}>Unlock Wallet</Button>
+              <Button variant="outline" onClick={() => {
+                setShowPassphraseModal(false)
+                setPassphrase("")
+                setGeneralError("")
+              }}>Cancel</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   )
