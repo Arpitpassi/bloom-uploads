@@ -19,7 +19,6 @@ import {
   Check,
   AlertCircle,
   Loader2,
-  LogOut,
 } from "lucide-react"
 import { ArconnectSigner, ArweaveSigner, type TurboAuthenticatedClient, TurboFactory } from "@ardrive/turbo-sdk/web"
 import Arweave from "arweave"
@@ -35,9 +34,8 @@ import { useAppLogic } from "../hooks/applogic"
 import { GoogleLogin, googleLogout } from '@react-oauth/google'
 import { encryptJWK, decryptJWK } from "../lib/cryptoUtils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog"
-import { Input } from "../components/ui/input"
-import { Button } from "../components/ui/button"
 import { Checkbox } from "../components/ui/checkbox"
+import { Button } from "../components/ui/button"
 
 TurboFactory.setLogLevel("debug")
 
@@ -126,7 +124,7 @@ const App = () => {
       try {
         const decoded = JSON.parse(atob(storedToken.split('.')[1]))
         const now = Math.floor(Date.now() / 1000)
-        if (decoded.exp > now) { // Check if token is still valid
+        if (decoded.exp > now) {
           setIsLoggedIn(true)
           setUserId(decoded.sub)
         } else {
@@ -230,7 +228,7 @@ const App = () => {
     setIsCreatingProfile(true)
     try {
       const jwk = await arweave.wallets.generate()
-      const { encryptedData, salt, iv } = await encryptJWK(jwk, userId) // Use userId as the key
+      const { encryptedData, salt, iv } = await encryptJWK(jwk, userId)
       const address = await arweave.wallets.getAddress(jwk)
       const profile = {
         name,
@@ -295,18 +293,6 @@ const App = () => {
           getFileIcon={getFileIcon}
           formatFileSize={formatFileSize}
         />
-        {isLoggedIn && (
-          <div className="text-center">
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              className="flex items-center justify-center space-x-2"
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Log Out</span>
-            </Button>
-          </div>
-        )}
       </div>
     )
   }
@@ -331,6 +317,9 @@ const App = () => {
         walletType={walletType}
         deleteSponsorAddress={deleteSponsorAddress}
         connectWallet={() => setShowWalletOptions(true)}
+        isLoggedIn={isLoggedIn}
+        handleGoogleLogin={() => setShowLoginModal(true)}
+        handleLogout={handleLogout}
       />
 
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">{mainContent}</main>
@@ -360,8 +349,6 @@ const App = () => {
           error={generalError}
           profileName={profileName}
           setProfileName={setProfileName}
-          passphrase=""
-          setPassphrase={() => {}}
         />
       )}
 

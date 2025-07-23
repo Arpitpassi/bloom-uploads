@@ -9,8 +9,6 @@ interface ProfileCreationModalProps {
   error: string
   profileName: string
   setProfileName: (name: string) => void
-  passphrase: string // Added to fix Error 3
-  setPassphrase: (passphrase: string) => void // Added to fix Error 3
 }
 
 const ProfileCreationModal: React.FC<ProfileCreationModalProps> = ({
@@ -20,8 +18,6 @@ const ProfileCreationModal: React.FC<ProfileCreationModalProps> = ({
   error,
   profileName,
   setProfileName,
-  passphrase,
-  setPassphrase,
 }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -66,19 +62,6 @@ const ProfileCreationModal: React.FC<ProfileCreationModalProps> = ({
                   onChange={(e) => setProfileName(e.target.value)}
                   disabled={isCreating}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors disabled:opacity-50"
-                />
-              </div>
-              <div>
-                <label htmlFor="passphrase" className="block text-sm font-medium text-gray-700 mb-2">
-                  Passphrase
-                </label>
-                <Input
-                  id="passphrase"
-                  type="password"
-                  placeholder="Enter a secure passphrase"
-                  value={passphrase}
-                  onChange={(e) => setPassphrase(e.target.value)}
-                  disabled={isCreating}
                 />
               </div>
 
