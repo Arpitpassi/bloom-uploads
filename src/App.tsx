@@ -316,7 +316,7 @@ const App = () => {
         savedSponsorAddress={savedSponsorAddress}
         walletType={walletType}
         deleteSponsorAddress={deleteSponsorAddress}
-        connectWallet={() => setShowWalletOptions(true)}
+        connectWallet={connectWallet}
         isLoggedIn={isLoggedIn}
         handleGoogleLogin={() => setShowLoginModal(true)}
         handleLogout={handleLogout}

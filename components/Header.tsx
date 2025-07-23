@@ -1,5 +1,5 @@
 import React from 'react'
-import { Menu, Copy, Trash2, LogOut, User, Wallet } from 'lucide-react'
+import { Menu, Copy, Trash2, LogOut, User, Wallet, Check } from 'lucide-react'
 import { Button } from './ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu'
 
@@ -18,9 +18,9 @@ interface HeaderProps {
   walletType: 'sponsored' | 'external' | null
   deleteSponsorAddress: () => void
   connectWallet: () => void
-  isLoggedIn: boolean // Added to fix error
-  handleGoogleLogin: () => void // Added to fix error
-  handleLogout: () => void // Added to fix error
+  isLoggedIn: boolean
+  handleGoogleLogin: () => void
+  handleLogout: () => void
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -42,6 +42,12 @@ const Header: React.FC<HeaderProps> = ({
   handleGoogleLogin,
   handleLogout,
 }) => {
+  // Function to shorten wallet addresses for display
+  const shortenAddress = (addr: string) => {
+    if (!addr) return 'Not connected'
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`
+  }
+
   return (
     <header className="bg-white border-b border-gray-200 py-4">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
@@ -62,14 +68,14 @@ const Header: React.FC<HeaderProps> = ({
               <DropdownMenuTrigger asChild>
                 <span />
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56">
-                {!isLoggedIn && (
+              <DropdownMenuContent className="w-64 p-2">
+                {!address && !isLoggedIn && (
                   <DropdownMenuItem onClick={handleGoogleLogin}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log In</span>
                   </DropdownMenuItem>
                 )}
-                {isLoggedIn && (
+                {!address && isLoggedIn && (
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log Out</span>
@@ -77,17 +83,49 @@ const Header: React.FC<HeaderProps> = ({
                 )}
                 {address && (
                   <>
+                    <div className="px-3 py-2 text-sm">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium text-gray-700">Wallet Address:</span>
+                        <div className="flex items-center space-x-2">
+                          <span className="font-mono text-gray-600">{shortenAddress(address)}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={copyAddress}
+                            disabled={!address}
+                            className="p-1"
+                          >
+                            {isAddressCopied ? (
+                              <Check className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <Copy className="h-4 w-4 text-gray-500" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                      {savedSponsorAddress && (
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-gray-700">Sponsor Address:</span>
+                          <div className="flex items-center space-x-2">
+                            <span className="font-mono text-gray-600">{shortenAddress(savedSponsorAddress)}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={copySponsorAddress}
+                              disabled={!savedSponsorAddress}
+                              className="p-1"
+                            >
+                              {isSponsorAddressCopied ? (
+                                <Check className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <Copy className="h-4 w-4 text-gray-500" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={copyAddress}>
-                      <Copy className="mr-2 h-4 w-4" />
-                      <span>{isAddressCopied ? 'Copied!' : 'Copy Wallet Address'}</span>
-                    </DropdownMenuItem>
-                    {savedSponsorAddress && (
-                      <DropdownMenuItem onClick={copySponsorAddress}>
-                        <Copy className="mr-2 h-4 w-4" />
-                        <span>{isSponsorAddressCopied ? 'Copied!' : 'Copy Sponsor Address'}</span>
-                      </DropdownMenuItem>
-                    )}
                     {walletType === 'sponsored' && (
                       <>
                         <DropdownMenuItem onClick={deleteProfile}>
