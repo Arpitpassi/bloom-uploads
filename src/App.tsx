@@ -35,7 +35,9 @@ import { useAppLogic } from "../hooks/applogic"
 import { GoogleLogin, googleLogout } from '@react-oauth/google'
 import { encryptJWK, decryptJWK } from "../lib/cryptoUtils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog"
+import { Input } from "../components/ui/input"
 import { Button } from "../components/ui/button"
+import { Checkbox } from "../components/ui/checkbox"
 
 TurboFactory.setLogLevel("debug")
 
@@ -113,7 +115,28 @@ const App = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [unlockedWallet, setUnlockedWallet] = useState<JWKInterface | null>(null)
+  const [showLoginModal, setShowLoginModal] = useState(false)
+  const [keepLoggedIn, setKeepLoggedIn] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Check for stored token on app load to restore login
+  useEffect(() => {
+    const storedToken = localStorage.getItem("googleAuthToken")
+    if (storedToken) {
+      try {
+        const decoded = JSON.parse(atob(storedToken.split('.')[1]))
+        const now = Math.floor(Date.now() / 1000)
+        if (decoded.exp > now) { // Check if token is still valid
+          setIsLoggedIn(true)
+          setUserId(decoded.sub)
+        } else {
+          localStorage.removeItem("googleAuthToken")
+        }
+      } catch (error) {
+        localStorage.removeItem("googleAuthToken")
+      }
+    }
+  }, [])
 
   // Load or create profile on Google login
   useEffect(() => {
@@ -163,11 +186,15 @@ const App = () => {
     const decoded = JSON.parse(atob(token.split('.')[1]))
     setIsLoggedIn(true)
     setUserId(decoded.sub)
+    if (keepLoggedIn) {
+      localStorage.setItem("googleAuthToken", token)
+    }
+    setShowLoginModal(false)
   }
 
   const handleGoogleFailure = () => {
     setGeneralError("Google login failed")
-    setShowProfileCreation(false)
+    setShowLoginModal(false)
   }
 
   const handleLogout = () => {
@@ -183,16 +210,12 @@ const App = () => {
     setProfileName("")
     setSavedSponsorAddress("")
     setSponsorWalletAddress("")
+    localStorage.removeItem("googleAuthToken")
   }
 
   const modifiedGenerateRandomJwk = async () => {
-    if (!isLoggedIn) {
-      setGeneralError("Please log in with Google to create a sponsored wallet")
-      setShowWalletOptions(false)
-      return
-    }
-    setShowProfileCreation(true)
     setShowWalletOptions(false)
+    setShowLoginModal(true)
   }
 
   const modifiedHandleProfileCreation = async (name: string) => {
@@ -224,7 +247,6 @@ const App = () => {
       setHasSponsoredWallet(true)
       setShowProfileCreation(false)
       setGeneralError("")
-      setShowWalletOptions(false)
     } catch (error: any) {
       setGeneralError(error.message || "Failed to generate wallet")
     } finally {
@@ -242,17 +264,7 @@ const App = () => {
   }
 
   let mainContent
-  if (!isLoggedIn && generalError === "Please log in with Google to create a sponsored wallet") {
-    mainContent = (
-      <div className="max-w-2xl mx-auto text-center space-y-4">
-        <p className="text-lg font-medium">Please log in to create a sponsored wallet</p>
-        <GoogleLogin
-          onSuccess={handleGoogleSuccess}
-          onError={handleGoogleFailure}
-        />
-      </div>
-    )
-  } else if (isUploading) {
+  if (isUploading) {
     mainContent = <UploadingIndicator displayedText={displayedText} isTextAnimating={isTextAnimating} />
   } else if (showTerminal) {
     mainContent = (
@@ -283,16 +295,6 @@ const App = () => {
           getFileIcon={getFileIcon}
           formatFileSize={formatFileSize}
         />
-        {!isLoggedIn && (
-          <div className="text-center">
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleFailure}
-              text="signin"
-              shape="pill"
-            />
-          </div>
-        )}
         {isLoggedIn && (
           <div className="text-center">
             <Button
@@ -358,8 +360,8 @@ const App = () => {
           error={generalError}
           profileName={profileName}
           setProfileName={setProfileName}
-          passphrase="" // Unused but kept for compatibility
-          setPassphrase={() => {}} // Unused but kept for compatibility
+          passphrase=""
+          setPassphrase={() => {}}
         />
       )}
 
@@ -378,6 +380,51 @@ const App = () => {
           sponsorWalletAddress={sponsorWalletAddress}
           setSponsorWalletAddress={setSponsorWalletAddress}
         />
+      )}
+
+      {showLoginModal && (
+        <Dialog open={showLoginModal} onOpenChange={setShowLoginModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Log in to Create Sponsored Wallet</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {generalError && (
+                <div className="flex items-center space-x-2 text-red-700">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>{generalError}</span>
+                </div>
+              )}
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="keepLoggedIn"
+                  checked={keepLoggedIn}
+                  onCheckedChange={(checked: boolean) => setKeepLoggedIn(checked)}
+                />
+                <label htmlFor="keepLoggedIn" className="text-sm font-medium text-gray-700">
+                  Keep me logged in
+                </label>
+              </div>
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleFailure}
+                text="signin"
+                shape="pill"
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowLoginModal(false)
+                  setGeneralError("")
+                }}
+              >
+                Cancel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   )
