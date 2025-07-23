@@ -371,7 +371,7 @@ const App = () => {
 
       {showLoginModal && (
         <Dialog open={showLoginModal} onOpenChange={setShowLoginModal}>
-          <DialogContent>
+          <DialogContent className="bg-white p-6 rounded-lg shadow-lg animate-in zoom-in-95 duration-300 max-w-md mx-auto">
             <DialogHeader>
               <DialogTitle>Log in to Create Sponsored Wallet</DialogTitle>
             </DialogHeader>
