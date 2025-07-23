@@ -75,12 +75,6 @@ const Header: React.FC<HeaderProps> = ({
                     <span>Log In</span>
                   </DropdownMenuItem>
                 )}
-                {!address && isLoggedIn && (
-                  <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log Out</span>
-                  </DropdownMenuItem>
-                )}
                 {address && (
                   <>
                     <div className="px-3 py-2 text-sm">
@@ -152,6 +146,12 @@ const Header: React.FC<HeaderProps> = ({
                   <DropdownMenuItem onClick={connectWallet}>
                     <Wallet className="mr-2 h-4 w-4" />
                     <span>Connect Wallet</span>
+                  </DropdownMenuItem>
+                )}
+                {isLoggedIn && (
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log Out</span>
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
