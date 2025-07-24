@@ -320,6 +320,7 @@ const App = () => {
         isLoggedIn={isLoggedIn}
         handleGoogleLogin={() => setShowLoginModal(true)}
         handleLogout={handleLogout}
+        isMobile={isMobile} // Added isMobile prop
       />
 
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">{mainContent}</main>

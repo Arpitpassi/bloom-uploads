@@ -1,27 +1,28 @@
-import React from 'react'
-import { LogOut, User, Wallet, Check, Copy, Trash2 } from 'lucide-react'
-import { Button } from './ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu'
-import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar'
+import React from 'react';
+import { LogOut, User, Wallet, Check, Copy, Trash2 } from 'lucide-react';
+import { Button } from './ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 
 interface HeaderProps {
-  profileName: string
-  address: string
-  showProfileMenu: boolean
-  setShowProfileMenu: (show: boolean) => void
-  deleteProfile: () => void
-  disconnectWallet: () => void
-  copyAddress: () => void
-  copySponsorAddress: () => void
-  isAddressCopied: boolean
-  isSponsorAddressCopied: boolean
-  savedSponsorAddress: string
-  walletType: 'sponsored' | 'external' | null
-  deleteSponsorAddress: () => void
-  connectWallet: () => void
-  isLoggedIn: boolean
-  handleGoogleLogin: () => void
-  handleLogout: () => void
+  profileName: string;
+  address: string;
+  showProfileMenu: boolean;
+  setShowProfileMenu: (show: boolean) => void;
+  deleteProfile: () => void;
+  disconnectWallet: () => void;
+  copyAddress: () => void;
+  copySponsorAddress: () => void;
+  isAddressCopied: boolean;
+  isSponsorAddressCopied: boolean;
+  savedSponsorAddress: string;
+  walletType: 'sponsored' | 'external' | null;
+  deleteSponsorAddress: () => void;
+  connectWallet: () => void;
+  isLoggedIn: boolean;
+  handleGoogleLogin: () => void;
+  handleLogout: () => void;
+  isMobile: boolean;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -42,11 +43,12 @@ const Header: React.FC<HeaderProps> = ({
   isLoggedIn,
   handleGoogleLogin,
   handleLogout,
+  isMobile,
 }) => {
   const shortenAddress = (addr: string) => {
-    if (!addr) return 'Not connected'
-    return `${addr.slice(0, 6)}...${addr.slice(-4)}`
-  }
+    if (!addr) return 'Not connected';
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
 
   return (
     <header className="bg-white border-b border-gray-100 py-3 shadow-sm">
@@ -151,7 +153,7 @@ const Header: React.FC<HeaderProps> = ({
                     )}
                   </>
                 )}
-                {!address && (
+                {!address && !isMobile && (
                   <DropdownMenuItem onClick={connectWallet} className="px-3 py-2 hover:bg-gray-50 rounded-md text-sm font-medium text-gray-700">
                     <Wallet className="mr-2 h-4 w-4" />
                     <span>Connect Wallet</span>
@@ -169,7 +171,7 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
     </header>
-  )
-}
+  );
+};
 
-export default Header
+export default Header;
