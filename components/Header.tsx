@@ -3,7 +3,6 @@ import { LogOut, User, Wallet, Check, Copy, Trash2 } from 'lucide-react'
 import { Button } from './ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu'
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar'
-import { useIsMobile } from '../hooks/use-mobile'
 
 interface HeaderProps {
   profileName: string
@@ -44,7 +43,6 @@ const Header: React.FC<HeaderProps> = ({
   handleGoogleLogin,
   handleLogout,
 }) => {
-  const isMobile = useIsMobile()
   const shortenAddress = (addr: string) => {
     if (!addr) return 'Not connected'
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`
@@ -67,9 +65,7 @@ const Header: React.FC<HeaderProps> = ({
               <AvatarImage src="/placeholder-user.jpg" alt="Profile" />
               <AvatarFallback>{profileName?.[0] || 'U'}</AvatarFallback>
             </Avatar>
-            <span className="text-sm font-medium">
-              {isLoggedIn || address ? (profileName || 'Profile') : 'Log In'}
-            </span>
+            <span className="text-sm font-medium">{profileName || 'Profile'}</span>
           </Button>
 
           {showProfileMenu && (
@@ -155,7 +151,7 @@ const Header: React.FC<HeaderProps> = ({
                     )}
                   </>
                 )}
-                {!address && !isMobile && (
+                {!address && (
                   <DropdownMenuItem onClick={connectWallet} className="px-3 py-2 hover:bg-gray-50 rounded-md text-sm font-medium text-gray-700">
                     <Wallet className="mr-2 h-4 w-4" />
                     <span>Connect Wallet</span>

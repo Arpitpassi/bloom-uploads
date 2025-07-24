@@ -11,6 +11,8 @@ import {
   File,
   Terminal,
   Wallet,
+  Globe,
+  Zap,
   Copy,
   Trash2,
   X,
@@ -113,22 +115,7 @@ const App = () => {
   const [unlockedWallet, setUnlockedWallet] = useState<JWKInterface | null>(null)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [keepLoggedIn, setKeepLoggedIn] = useState(false)
-  const [isOffline, setIsOffline] = useState(!navigator.onLine)
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  // Handle online/offline status
-  useEffect(() => {
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
 
   // Check for stored token on app load to restore login
   useEffect(() => {
@@ -299,14 +286,6 @@ const App = () => {
   } else {
     mainContent = (
       <div className="space-y-6">
-        {isOffline && (
-          <div className="rounded-lg bg-yellow-50 border border-yellow-200 p-3 text-center">
-            <div className="flex items-center justify-center space-x-2">
-              <AlertCircle className="h-4 w-4 text-yellow-500" />
-              <span className="text-sm text-yellow-700">You are offline. Some features may be unavailable.</span>
-            </div>
-          </div>
-        )}
         <FileSelector
           selectedFile={selectedFile}
           onFileSelect={handleFileSelect}
@@ -343,9 +322,7 @@ const App = () => {
         handleLogout={handleLogout}
       />
 
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {mainContent}
-      </main>
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">{mainContent}</main>
 
       {showWalletOptions && (
         <WalletOptionsModal
