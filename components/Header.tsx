@@ -1,11 +1,11 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { LogOut, User, Wallet, Check, Copy, Trash2 } from "lucide-react"
 import { Button } from "./ui/button"
 import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card" // Import Card components
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card"
 
 interface HeaderProps {
   profileName: string
@@ -28,18 +28,93 @@ interface HeaderProps {
   isMobile: boolean
 }
 
-// Toast component for reusable toast UI
-const Toast = ({ message, show, type }: { message: string; show: boolean; type: "success" | "error" }) => {
-  const bgColorClass = type === "success" ? "bg-pear" : "bg-burntSienna"
+// Improved Toast component with proper stacking and colors
+const Toast = ({ 
+  message, 
+  show, 
+  type, 
+  index = 0 
+}: { 
+  message: string
+  show: boolean
+  type: "success" | "error"
+  index?: number
+}) => {
+  const bgColorClass = type === "success" 
+    ? "bg-green-500 border-green-600" 
+    : "bg-red-500 border-red-600"
+  
   return (
     <div
-      className={`fixed bottom-4 right-4 ${bgColorClass} text-white text-sm font-medium py-2 px-4 rounded-lg shadow-lg flex items-center space-x-2 transition-all duration-300 ${
-        show ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
-      }`}
+      className={`
+        fixed right-4 bg-white border-2 ${bgColorClass} text-white text-sm font-medium 
+        py-3 px-4 rounded-lg shadow-lg flex items-center space-x-2 
+        transition-all duration-300 ease-in-out z-50
+        ${show 
+          ? "opacity-100 translate-x-0" 
+          : "opacity-0 translate-x-full pointer-events-none"
+        }
+      `}
+      style={{
+        bottom: `${16 + (index * 60)}px`, // Stack toasts vertically
+      }}
     >
-      <Check className="h-4 w-4" />
-      <span>{message}</span>
+      <div className={`w-2 h-2 rounded-full ${type === "success" ? "bg-green-200" : "bg-red-200"}`} />
+      <span className="text-white font-medium">{message}</span>
     </div>
+  )
+}
+
+// Toast manager for handling multiple toasts
+const ToastManager = () => {
+  const [toasts, setToasts] = useState<Array<{
+    id: string
+    message: string
+    type: "success" | "error"
+    show: boolean
+  }>>([])
+
+  const addToast = (message: string, type: "success" | "error") => {
+    const id = Date.now().toString()
+    const newToast = { id, message, type, show: true }
+    
+    setToasts(prev => [...prev, newToast])
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+      setToasts(prev => 
+        prev.map(toast => 
+          toast.id === id ? { ...toast, show: false } : toast
+        )
+      )
+      
+      // Remove from array after animation
+      setTimeout(() => {
+        setToasts(prev => prev.filter(toast => toast.id !== id))
+      }, 300)
+    }, 3000)
+  }
+
+  // Expose addToast function globally for use in header
+  useEffect(() => {
+    (window as any).headerToast = addToast
+    return () => {
+      delete (window as any).headerToast
+    }
+  }, [])
+
+  return (
+    <>
+      {toasts.map((toast, index) => (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          show={toast.show}
+          type={toast.type}
+          index={index}
+        />
+      ))}
+    </>
   )
 }
 
@@ -63,29 +138,22 @@ const Header: React.FC<HeaderProps> = ({
   handleLogout,
   isMobile,
 }) => {
-  const [showAddressToast, setShowAddressToast] = useState(false)
-  const [showSponsorToast, setShowSponsorToast] = useState(false)
-  const [showDeleteProfileToast, setShowDeleteProfileToast] = useState(false)
-  const [showDeleteSponsorToast, setShowDeleteSponsorToast] = useState(false)
-  const [showDisconnectToast, setShowDisconnectToast] = useState(false)
-  const [showLoginToast, setShowLoginToast] = useState(false)
-  const [showLogoutToast, setShowLogoutToast] = useState(false)
-  const [showConnectToast, setShowConnectToast] = useState(false)
+  const showToast = (message: string, type: "success" | "error") => {
+    if ((window as any).headerToast) {
+      (window as any).headerToast(message, type)
+    }
+  }
 
-  // Handle toast notifications
+  // Handle toast notifications with improved UX
   useEffect(() => {
     if (isAddressCopied) {
-      setShowAddressToast(true)
-      const timer = setTimeout(() => setShowAddressToast(false), 2000)
-      return () => clearTimeout(timer)
+      showToast("Address Copied!", "success")
     }
   }, [isAddressCopied])
 
   useEffect(() => {
     if (isSponsorAddressCopied) {
-      setShowSponsorToast(true)
-      const timer = setTimeout(() => setShowSponsorToast(false), 2000)
-      return () => clearTimeout(timer)
+      showToast("Sponsor Address Copied!", "success")
     }
   }, [isSponsorAddressCopied])
 
@@ -103,38 +171,36 @@ const Header: React.FC<HeaderProps> = ({
 
   const handleDeleteProfile = () => {
     deleteProfile()
-    setShowDeleteProfileToast(true)
-    setTimeout(() => setShowDeleteProfileToast(false), 2000)
+    showToast("Profile Deleted!", "error")
+    setShowProfileMenu(false)
   }
 
   const handleDeleteSponsorAddress = () => {
     deleteSponsorAddress()
-    setShowDeleteSponsorToast(true)
-    setTimeout(() => setShowDeleteSponsorToast(false), 2000)
+    showToast("Sponsor Removed!", "error")
   }
 
   const handleDisconnectWallet = () => {
     disconnectWallet()
-    setShowDisconnectToast(true)
-    setTimeout(() => setShowDisconnectToast(false), 2000)
+    showToast("Wallet Disconnected!", "error")
+    setShowProfileMenu(false)
   }
 
   const handleGoogleLoginClick = () => {
     handleGoogleLogin()
-    setShowLoginToast(true)
-    setTimeout(() => setShowLoginToast(false), 2000)
+    showToast("Logging In...", "success")
+    setShowProfileMenu(false)
   }
 
   const handleLogoutClick = () => {
     handleLogout()
-    setShowLogoutToast(true)
-    setTimeout(() => setShowLogoutToast(false), 2000)
+    showToast("Logged Out!", "success")
+    setShowProfileMenu(false)
   }
 
   const handleConnectWallet = () => {
     connectWallet()
-    setShowConnectToast(true)
-    setTimeout(() => setShowConnectToast(false), 2000)
+    setShowProfileMenu(false)
   }
 
   const MenuItem = ({
@@ -159,6 +225,8 @@ const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
+      <ToastManager />
+      
       <header className="bg-white border-b border-gray-100 py-3 shadow-sm relative z-40">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -300,18 +368,6 @@ const Header: React.FC<HeaderProps> = ({
           </div>
         </>
       )}
-
-      {/* Toast Container */}
-      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
-        <Toast show={showAddressToast} message="Address Copied!" type="success" />
-        <Toast show={showSponsorToast} message="Sponsor Address Copied!" type="success" />
-        <Toast show={showDeleteProfileToast} message="Profile Deleted!" type="error" />
-        <Toast show={showDeleteSponsorToast} message="Sponsor Removed!" type="error" />
-        <Toast show={showDisconnectToast} message="Wallet Disconnected!" type="error" />
-        <Toast show={showLoginToast} message="Logging In..." type="success" />
-        <Toast show={showLogoutToast} message="Logged Out!" type="success" />
-        <Toast show={showConnectToast} message="Connecting Wallet..." type="success" />
-      </div>
     </>
   )
 }

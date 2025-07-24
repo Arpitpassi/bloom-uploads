@@ -38,6 +38,9 @@ export const useAppLogic = (arweave: any) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [walletType, setWalletType] = useState<"sponsored" | "external" | null>(null)
   const [hasSponsoredWallet, setHasSponsoredWallet] = useState(false)
+  
+  // Add state to track profile creation attempt
+  const [isProfileCreationInProgress, setIsProfileCreationInProgress] = useState(false)
 
   const { connect, disconnect } = useConnection()
   const { connected } = useUser()
@@ -98,16 +101,20 @@ export const useAppLogic = (arweave: any) => {
   // Wallet state sync with Arweave Wallet Kit
   useEffect(() => {
     if (connected) {
-      setWallet(window.arweaveWallet)
-      setWalletType("external")
-      window.arweaveWallet.getActiveAddress().then((addr: string) => setAddress(addr))
-      setShowWalletOptions(false)
+      // Only proceed if not in profile creation process
+      if (!isProfileCreationInProgress) {
+        setWallet(window.arweaveWallet)
+        setWalletType("external")
+        window.arweaveWallet.getActiveAddress().then((addr: string) => setAddress(addr))
+        setShowWalletOptions(false)
+        setGeneralError("") // Clear any previous errors
+      }
     } else if (walletType === "external") {
       setWallet(null)
       setAddress("")
       setWalletType(null)
     }
-  }, [connected])
+  }, [connected, isProfileCreationInProgress])
 
   // Utility functions
   const saveProfile = (name: string, wallet: JWKInterface, sponsorAddress: string = "") => {
@@ -150,8 +157,13 @@ export const useAppLogic = (arweave: any) => {
       setSavedSponsorAddress("")
       setSponsorWalletAddress("")
       setShowWalletOptions(false)
+      setGeneralError("") // Clear errors on successful disconnect
     } catch (error: any) {
-      setGeneralError(error.message || "Failed to disconnect wallet")
+      toast({
+        title: "Error",
+        description: error.message || "Failed to disconnect wallet",
+        variant: "destructive",
+      })
     }
   }
 
@@ -291,15 +303,22 @@ export const useAppLogic = (arweave: any) => {
   }
 
   const generateRandomJwk = async () => {
+    setIsProfileCreationInProgress(true)
     setShowProfileCreation(true)
     setShowWalletOptions(false)
+    setGeneralError("") // Clear any previous errors
   }
 
   const handleProfileCreation = async (name: string) => {
-    if (!name) {
-      setGeneralError("Please enter a profile name")
+    if (!name.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a profile name",
+        variant: "destructive",
+      })
       return
     }
+    
     setIsCreatingProfile(true)
     try {
       const jwk = await arweave.wallets.generate()
@@ -310,21 +329,49 @@ export const useAppLogic = (arweave: any) => {
       setWalletType("sponsored")
       setHasSponsoredWallet(true)
       setShowProfileCreation(false)
-      setGeneralError("")
       setShowWalletOptions(false)
+      
+      toast({
+        title: "Success",
+        description: "Profile created successfully!",
+      })
     } catch (error: any) {
-      setGeneralError(error.message || "Failed to generate wallet")
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate wallet",
+        variant: "destructive",
+      })
     } finally {
       setIsCreatingProfile(false)
+      setIsProfileCreationInProgress(false)
     }
+  }
+
+  const handleProfileCreationCancel = () => {
+    setShowProfileCreation(false)
+    setIsProfileCreationInProgress(false)
+    setShowWalletOptions(false) // Close the wallet options modal
+    setGeneralError("") // Clear any errors
   }
 
   const connectWallet = async () => {
     try {
+      setIsProfileCreationInProgress(true) // Prevent interference during connection
       await connect()
       setShowWalletOptions(false)
+      
+      toast({
+        title: "Success",
+        description: "Wallet connected successfully!",
+      })
     } catch (error: any) {
-      setGeneralError(error.message || "Failed to connect wallet")
+      toast({
+        title: "Error",
+        description: error.message || "Failed to connect wallet",
+        variant: "destructive",
+      })
+    } finally {
+      setIsProfileCreationInProgress(false)
     }
   }
 
@@ -352,12 +399,20 @@ export const useAppLogic = (arweave: any) => {
         : !wallet
         ? "No wallet connected"
         : "Turbo client not initialized"
-      setGeneralError(errorMsg)
+      toast({
+        title: "Error",
+        description: errorMsg,
+        variant: "destructive",
+      })
       return
     }
 
     if (sponsorWalletAddress && !validateArweaveAddress(sponsorWalletAddress)) {
-      setGeneralError("Invalid sponsor wallet address. Must be a valid 43-character Arweave address.")
+      toast({
+        title: "Error",
+        description: "Invalid sponsor wallet address. Must be a valid 43-character Arweave address.",
+        variant: "destructive",
+      })
       return
     }
 
@@ -399,6 +454,12 @@ export const useAppLogic = (arweave: any) => {
             animateTextContent(errorMsg)
             setIsUploading(false)
             setShowTerminal(true)
+            
+            toast({
+              title: "Signing Error",
+              description: error.message,
+              variant: "destructive",
+            })
           },
           onUploadProgress: () => {
             setUploadStatus("Uploading to Arweave...")
@@ -415,6 +476,12 @@ export const useAppLogic = (arweave: any) => {
             animateTextContent(errorMsg)
             setIsUploading(false)
             setShowTerminal(true)
+            
+            toast({
+              title: "Upload Error",
+              description: errorMsg,
+              variant: "destructive",
+            })
           },
         },
       }
@@ -427,6 +494,12 @@ export const useAppLogic = (arweave: any) => {
         setUploadStatus("Upload completed successfully!")
         setErrorMessage("")
         animateTextContent(`Upload completed successfully!\nTransaction ID: ${upload.id}`)
+        
+        toast({
+          title: "Success",
+          description: "File uploaded successfully!",
+        })
+        
         setTimeout(() => {
           setIsUploading(false)
           setShowTerminal(true)
@@ -438,6 +511,12 @@ export const useAppLogic = (arweave: any) => {
         animateTextContent(errorMsg)
         setIsUploading(false)
         setShowTerminal(true)
+        
+        toast({
+          title: "Error",
+          description: errorMsg,
+          variant: "destructive",
+        })
       }
     } catch (error: any) {
       let errorMsg = `Upload failed: ${error.message}`
@@ -453,6 +532,12 @@ export const useAppLogic = (arweave: any) => {
       animateTextContent(errorMsg)
       setIsUploading(false)
       setShowTerminal(true)
+      
+      toast({
+        title: "Upload Failed",
+        description: errorMsg,
+        variant: "destructive",
+      })
     }
   }
 
@@ -522,6 +607,7 @@ export const useAppLogic = (arweave: any) => {
     formatFileSize,
     generateRandomJwk,
     handleProfileCreation,
+    handleProfileCreationCancel, // Add this new function
     connectWallet,
     handleUploadClick,
     handleUpload,
