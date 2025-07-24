@@ -11,8 +11,6 @@ import {
   File,
   Terminal,
   Wallet,
-  Globe,
-  Zap,
   Copy,
   Trash2,
   X,
@@ -115,25 +113,8 @@ const App = () => {
   const [unlockedWallet, setUnlockedWallet] = useState<JWKInterface | null>(null)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [keepLoggedIn, setKeepLoggedIn] = useState(false)
-  const [showInstallPrompt, setShowInstallPrompt] = useState(false)
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  // PWA install prompt handling
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setShowInstallPrompt(true);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
-  }, []);
 
   // Handle online/offline status
   useEffect(() => {
@@ -293,16 +274,6 @@ const App = () => {
     }
   }
 
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setShowInstallPrompt(false);
-    }
-    setDeferredPrompt(null);
-  };
-
   let mainContent
   if (isUploading) {
     mainContent = <UploadingIndicator displayedText={displayedText} isTextAnimating={isTextAnimating} />
@@ -373,23 +344,6 @@ const App = () => {
       />
 
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {showInstallPrompt && (
-          <div className="rounded-lg bg-blue-50 border border-blue-200 p-4 mb-6 text-center">
-            <div className="flex items-center justify-center space-x-2">
-              <Zap className="h-5 w-5 text-blue-500" />
-              <span className="text-sm font-medium text-blue-700">
-                Install Bloom Uploads for a better experience!
-              </span>
-              <Button
-                onClick={handleInstallClick}
-                className="inline-flex items-center space-x-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-              >
-                <Globe className="h-4 w-4" />
-                <span>Install App</span>
-              </Button>
-            </div>
-          </div>
-        )}
         {mainContent}
       </main>
 

@@ -51,14 +51,16 @@ const WalletOptionsModal: React.FC<WalletOptionsModalProps> = ({
               <Wallet className="h-4 w-4" />
               <span>Create Sponsored Wallet</span>
             </Button>
-            <Button
-              onClick={onConnectExternal}
-              disabled={hasSponsoredWallet}
-              className="w-full flex items-center justify-center space-x-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Wallet className="h-4 w-4" />
-              <span>Connect External Wallet</span>
-            </Button>
+            {!isMobile && (
+              <Button
+                onClick={onConnectExternal}
+                disabled={hasSponsoredWallet}
+                className="w-full flex items-center justify-center space-x-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Wallet className="h-4 w-4" />
+                <span>Connect External Wallet</span>
+              </Button>
+            )}
           </div>
 
           {isMobile && (
