@@ -46,12 +46,12 @@ const FileSelector: React.FC<FileSelectorProps> = ({
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 p-6">
+    <div className="max-w-2xl mx-auto space-y-8">
       <div
-        className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-all duration-300 ${
+        className={`relative border-2 border-dashed rounded-xl p-8 md:p-12 text-center transition-all duration-300 ${
           dragOver
-            ? "border-blue-500 bg-blue-50 scale-[1.01]"
-            : "border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100"
+            ? "border-blue-500 bg-blue-50 scale-[1.02]"
+            : "border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100"
         }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -92,7 +92,7 @@ const FileSelector: React.FC<FileSelectorProps> = ({
         <div className="text-center">
           <button
             onClick={onUpload}
-            className="inline-flex items-center space-x-2 rounded-lg bg-gray-900 px-6 py-2.5 text-sm font-medium text-white hover:bg-gray-800 transition-all duration-200 shadow-md hover:shadow-lg"
+            className="inline-flex items-center space-x-2 rounded-lg bg-black px-6 py-3 text-sm font-medium text-white hover:bg-gray-800 transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"
           >
             <Upload className="h-4 w-4" />
             <span>Upload to Arweave</span>
