@@ -156,30 +156,74 @@ export const useAppLogic = (arweave: any) => {
   }
 
   const copyAddress = async () => {
-    if (address) {
-      try {
+    if (!address) {
+      toast({
+        title: "Error",
+        description: "No wallet address to copy",
+        variant: "destructive",
+      })
+      return
+    }
+    try {
+      if (navigator.clipboard) {
         await navigator.clipboard.writeText(address)
-        setIsAddressCopied(true)
-        toast({ title: "Success", description: "Wallet address copied to clipboard" })
-        setTimeout(() => setIsAddressCopied(false), 2000)
-      } catch (error) {
-        console.error("Failed to copy address:", error)
-        toast({ title: "Error", description: "Failed to copy wallet address" })
+      } else {
+        const textarea = document.createElement("textarea")
+        textarea.value = address
+        document.body.appendChild(textarea)
+        textarea.select()
+        document.execCommand("copy")
+        document.body.removeChild(textarea)
       }
+      setIsAddressCopied(true)
+      toast({
+        title: "Success",
+        description: `Address ${address.slice(0, 10)}... copied to clipboard`,
+      })
+      setTimeout(() => setIsAddressCopied(false), 2000)
+    } catch (error) {
+      console.error("Failed to copy address:", error)
+      toast({
+        title: "Error",
+        description: `Failed to copy address: ${error instanceof Error ? error.message : String(error)}. Select the address manually.`,
+        variant: "destructive",
+      })
     }
   }
 
   const copySponsorAddress = async () => {
-    if (savedSponsorAddress) {
-      try {
+    if (!savedSponsorAddress) {
+      toast({
+        title: "Error",
+        description: "No sponsor address to copy",
+        variant: "destructive",
+      })
+      return
+    }
+    try {
+      if (navigator.clipboard) {
         await navigator.clipboard.writeText(savedSponsorAddress)
-        setIsSponsorAddressCopied(true)
-        toast({ title: "Success", description: "Sponsor address copied to clipboard" })
-        setTimeout(() => setIsSponsorAddressCopied(false), 2000)
-      } catch (error) {
-        console.error("Failed to copy sponsor address:", error)
-        toast({ title: "Error", description: "Failed to copy sponsor address" })
+      } else {
+        const textarea = document.createElement("textarea")
+        textarea.value = savedSponsorAddress
+        document.body.appendChild(textarea)
+        textarea.select()
+        document.execCommand("copy")
+        document.body.removeChild(textarea)
       }
+      setIsSponsorAddressCopied(true)
+      toast({
+        title: "Success",
+        description: `Address ${savedSponsorAddress.slice(0, 10)}... copied to clipboard`,
+      })
+      setTimeout(() => setIsSponsorAddressCopied(false), 2000)
+    } catch (error) {
+      console.error("Failed to copy sponsor address:", error)
+      toast({
+        title: "Error",
+        description: `Failed to copy address: ${error instanceof Error ? error.message : String(error)}. Select the address manually.`,
+        variant: "destructive",
+      })
     }
   }
 
