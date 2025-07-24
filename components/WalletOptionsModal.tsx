@@ -45,8 +45,7 @@ const WalletOptionsModal: React.FC<WalletOptionsModalProps> = ({
           <div className="space-y-3">
             <Button
               onClick={onCreateSponsored}
-              disabled={hasSponsoredWallet}
-              className="w-full flex items-center justify-center space-x-2 rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center space-x-2 rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition-colors"
             >
               <Wallet className="h-4 w-4" />
               <span>{isMobile ? 'Log In with Google' : 'Create Sponsored Wallet'}</span>

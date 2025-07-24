@@ -6,10 +6,12 @@ import { ArconnectSigner, ArweaveSigner, TurboFactory, type TurboAuthenticatedCl
 import type { JWKInterface } from "arweave/node/lib/wallet"
 import { useConnection } from "@arweave-wallet-kit/react"
 import { useUser } from "./useUser"
+import { useToast } from "./use-toast"
 
 type TurboSigner = ArconnectSigner | ArweaveSigner
 
 export const useAppLogic = (arweave: any) => {
+  const { toast } = useToast()
   const [wallet, setWallet] = useState<JWKInterface | Window["arweaveWallet"] | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploadStatus, setUploadStatus] = useState<string>("")
@@ -153,21 +155,31 @@ export const useAppLogic = (arweave: any) => {
     }
   }
 
-  const copyAddress = () => {
+  const copyAddress = async () => {
     if (address) {
-      navigator.clipboard.writeText(address).then(() => {
+      try {
+        await navigator.clipboard.writeText(address)
         setIsAddressCopied(true)
+        toast({ title: "Success", description: "Wallet address copied to clipboard" })
         setTimeout(() => setIsAddressCopied(false), 2000)
-      })
+      } catch (error) {
+        console.error("Failed to copy address:", error)
+        toast({ title: "Error", description: "Failed to copy wallet address" })
+      }
     }
   }
 
-  const copySponsorAddress = () => {
+  const copySponsorAddress = async () => {
     if (savedSponsorAddress) {
-      navigator.clipboard.writeText(savedSponsorAddress).then(() => {
+      try {
+        await navigator.clipboard.writeText(savedSponsorAddress)
         setIsSponsorAddressCopied(true)
+        toast({ title: "Success", description: "Sponsor address copied to clipboard" })
         setTimeout(() => setIsSponsorAddressCopied(false), 2000)
-      })
+      } catch (error) {
+        console.error("Failed to copy sponsor address:", error)
+        toast({ title: "Error", description: "Failed to copy sponsor address" })
+      }
     }
   }
 
@@ -446,7 +458,7 @@ export const useAppLogic = (arweave: any) => {
     setErrorMessage,
     setProfileName,
     setShowProfileCreation,
-    setIsCreatingProfile, // Added to fix Errors 1 and 2
+    setIsCreatingProfile,
     setIsAddressCopied,
     setIsSponsorAddressCopied,
     setIsMobile,
