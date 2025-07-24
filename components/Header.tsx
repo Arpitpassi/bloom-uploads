@@ -24,6 +24,7 @@ interface HeaderProps {
   handleLogout: () => void
   handleInstallClick: () => void
   isAppInstalled: boolean
+  isMobile: boolean
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -46,6 +47,7 @@ const Header: React.FC<HeaderProps> = ({
   handleLogout,
   handleInstallClick,
   isAppInstalled,
+  isMobile,
 }) => {
   const shortenAddress = (addr: string) => {
     if (!addr) return 'Not connected'
@@ -155,7 +157,7 @@ const Header: React.FC<HeaderProps> = ({
                     )}
                   </>
                 )}
-                {!address && (
+                {!address && !isMobile && (
                   <DropdownMenuItem onClick={connectWallet} className="px-3 py-2 hover:bg-gray-50 rounded-md text-sm font-medium text-gray-700">
                     <Wallet className="mr-2 h-4 w-4" />
                     <span>Connect Wallet</span>

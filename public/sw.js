@@ -4,10 +4,6 @@ const STATIC_ASSETS = [
   '/index.html',
   '/static/js/main.js',
   '/static/css/main.css',
-  '/icon-192x192.png',
-  '/icon-512x512.png',
-  '/icon-maskable-192x192.png',
-  '/icon-maskable-512x512.png',
   '/placeholder-user.png',
   '/placeholder-user.jpg',
   '/manifest.json'
@@ -18,7 +14,9 @@ const DYNAMIC_CACHE = 'bloom-dynamic-v2';
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
+      return cache.addAll(STATIC_ASSETS).catch((error) => {
+        console.error('Failed to cache static assets:', error);
+      });
     }).then(() => self.skipWaiting())
   );
 });
@@ -42,6 +40,19 @@ self.addEventListener('activate', (event) => {
 // Fetch event - Cache-first for static, network-first for dynamic
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
+  const isUnsupportedScheme = ['chrome-extension', 'about'].includes(url.protocol);
+  const isUnsupportedMethod = event.request.method !== 'GET';
+
+  // Skip unsupported schemes or methods
+  if (isUnsupportedScheme || isUnsupportedMethod) {
+    event.respondWith(fetch(event.request).catch(() => {
+      return new Response('Request not supported.', {
+        status: 400,
+        statusText: 'Bad Request'
+      });
+    }));
+    return;
+  }
 
   // Handle static assets with cache-first strategy
   if (STATIC_ASSETS.includes(url.pathname) || url.pathname.includes('/static/')) {
