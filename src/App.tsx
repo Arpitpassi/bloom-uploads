@@ -36,7 +36,6 @@ import { encryptJWK, decryptJWK } from "../lib/cryptoUtils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog"
 import { Checkbox } from "../components/ui/checkbox"
 import { Button } from "../components/ui/button"
-import { useToast } from "../hooks/use-toast"
 
 TurboFactory.setLogLevel("debug")
 
@@ -47,7 +46,6 @@ const arweave = new Arweave({
 })
 
 const App = () => {
-  const { toast } = useToast()
   const {
     wallet,
     selectedFile,
@@ -120,123 +118,36 @@ const App = () => {
   const [showInstallPrompt, setShowInstallPrompt] = useState(false)
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
-  const [isAppInstalled, setIsAppInstalled] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  // Register service worker
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js')
-        .then(registration => {
-          console.log('Service Worker registered with scope:', registration.scope)
-          if (registration.active) {
-            console.log('Service Worker is active')
-          } else {
-            console.log('Service Worker is not active yet')
-          }
-        })
-        .catch(error => {
-          console.error('Service Worker registration failed:', error)
-          setGeneralError('Failed to register service worker. PWA installation may not work.')
-          toast({
-            title: "Service Worker Error",
-            description: "Failed to register service worker. PWA installation may not work.",
-            variant: "destructive",
-          })
-        })
-    } else {
-      console.warn('Service Worker not supported in this browser')
-      setGeneralError('Service Worker not supported. PWA installation is unavailable.')
-      toast({
-        title: "Service Worker Error",
-        description: "Service Worker not supported. PWA installation is unavailable.",
-        variant: "destructive",
-      })
-    }
-  }, [setGeneralError, toast])
 
   // PWA install prompt handling
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
-      console.log('beforeinstallprompt event fired')
-      e.preventDefault()
-      setDeferredPrompt(e)
-      setShowInstallPrompt(true)
-      // Verify manifest and service worker status
-      fetch('/manifest.json')
-        .then(response => {
-          if (!response.ok) {
-            console.error('Manifest fetch failed:', response.statusText)
-            setGeneralError('Failed to load manifest.json')
-            toast({
-              title: "PWA Error",
-              description: "Failed to load manifest.json",
-              variant: "destructive",
-            })
-          } else {
-            console.log('Manifest fetched successfully')
-          }
-        })
-        .catch(error => {
-          console.error('Error fetching manifest:', error)
-          setGeneralError('Error accessing manifest.json')
-          toast({
-            title: "PWA Error",
-            description: "Error accessing manifest.json",
-            variant: "destructive",
-          })
-        })
-    }
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallPrompt(true);
+    };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-
-    // Check if app is already installed
-    window.addEventListener('appinstalled', () => {
-      console.log('App installed')
-      setIsAppInstalled(true)
-      setShowInstallPrompt(false)
-      setDeferredPrompt(null)
-    })
-
-    // Debug PWA eligibility
-    if (!navigator.serviceWorker) {
-      console.warn('Service Worker API not available')
-      setGeneralError('Service Worker API not available')
-      toast({
-        title: "PWA Error",
-        description: "Service Worker API not available",
-        variant: "destructive",
-      })
-    }
-    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-      console.warn('PWA requires secure context (HTTPS or localhost)')
-      setGeneralError('PWA requires secure context (HTTPS or localhost)')
-      toast({
-        title: "PWA Error",
-        description: "PWA requires secure context (HTTPS or localhost)",
-        variant: "destructive",
-      })
-    }
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-      window.removeEventListener('appinstalled', () => {})
-    }
-  }, [setGeneralError, toast])
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
 
   // Handle online/offline status
   useEffect(() => {
-    const handleOnline = () => setIsOffline(false)
-    const handleOffline = () => setIsOffline(true)
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
 
-    window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', handleOffline)
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
 
     return () => {
-      window.removeEventListener('online', handleOnline)
-      window.removeEventListener('offline', handleOffline)
-    }
-  }, [])
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Check for stored token on app load to restore login
   useEffect(() => {
@@ -264,6 +175,7 @@ const App = () => {
       if (savedProfile) {
         const profile = JSON.parse(savedProfile)
         if (profile.userId === userId) {
+          // Decrypt existing wallet
           decryptJWK(profile.encryptedJWK, profile.salt, profile.iv, userId)
             .then((jwk) => {
               setUnlockedWallet(jwk)
@@ -275,27 +187,18 @@ const App = () => {
             })
             .catch(() => {
               setGeneralError("Failed to decrypt wallet. Please try logging in again.")
-              toast({
-                title: "Wallet Error",
-                description: "Failed to decrypt wallet. Please try logging in again.",
-                variant: "destructive",
-              })
               handleLogout()
             })
         } else {
           setGeneralError("Profile belongs to a different Google account. Please log in with the correct account.")
-          toast({
-            title: "Profile Error",
-            description: "Profile belongs to a different Google account. Please log in with the correct account.",
-            variant: "destructive",
-          })
           handleLogout()
         }
       } else {
+        // Automatically open profile creation for new users
         setShowProfileCreation(true)
       }
     }
-  }, [isLoggedIn, userId, setProfileName, setSavedSponsorAddress, setSponsorWalletAddress, setWalletType, setHasSponsoredWallet, toast])
+  }, [isLoggedIn, userId, setProfileName, setSavedSponsorAddress, setSponsorWalletAddress, setWalletType, setHasSponsoredWallet])
 
   // Sync wallet state with unlocked wallet
   useEffect(() => {
@@ -321,11 +224,6 @@ const App = () => {
 
   const handleGoogleFailure = () => {
     setGeneralError("Google login failed")
-    toast({
-      title: "Login Error",
-      description: "Google login failed",
-      variant: "destructive",
-    })
     setShowLoginModal(false)
   }
 
@@ -353,20 +251,10 @@ const App = () => {
   const modifiedHandleProfileCreation = async (name: string) => {
     if (!name) {
       setGeneralError("Please enter a profile name")
-      toast({
-        title: "Profile Creation Error",
-        description: "Please enter a profile name",
-        variant: "destructive",
-      })
       return
     }
     if (!isLoggedIn || !userId) {
       setGeneralError("Please log in with Google first")
-      toast({
-        title: "Profile Creation Error",
-        description: "Please log in with Google first",
-        variant: "destructive",
-      })
       return
     }
     setIsCreatingProfile(true)
@@ -389,17 +277,8 @@ const App = () => {
       setHasSponsoredWallet(true)
       setShowProfileCreation(false)
       setGeneralError("")
-      toast({
-        title: "Profile Created",
-        description: `Profile "${name}" created successfully`,
-      })
     } catch (error: any) {
       setGeneralError(error.message || "Failed to generate wallet")
-      toast({
-        title: "Profile Creation Error",
-        description: error.message || "Failed to generate wallet",
-        variant: "destructive",
-      })
     } finally {
       setIsCreatingProfile(false)
     }
@@ -411,56 +290,18 @@ const App = () => {
       handleLogout()
     } catch (error: any) {
       setGeneralError(error.message || "Failed to disconnect wallet")
-      toast({
-        title: "Wallet Error",
-        description: error.message || "Failed to disconnect wallet",
-        variant: "destructive",
-      })
     }
   }
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) {
-      console.error('No deferred prompt available')
-      setGeneralError('Installation prompt not available. Ensure manifest and service worker are correctly configured.')
-      toast({
-        title: "PWA Installation Error",
-        description: "Installation prompt not available. Ensure manifest and service worker are correctly configured.",
-        variant: "destructive",
-      })
-      return
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setShowInstallPrompt(false);
     }
-    try {
-      console.log('Triggering install prompt')
-      deferredPrompt.prompt()
-      const { outcome } = await deferredPrompt.userChoice
-      console.log('Install prompt outcome:', outcome)
-      if (outcome === 'accepted') {
-        setIsAppInstalled(true)
-        setShowInstallPrompt(false)
-        console.log('PWA installation accepted')
-        toast({
-          title: "App Installed",
-          description: "Bloom Uploads has been installed successfully!",
-        })
-      } else {
-        console.log('PWA installation dismissed')
-        toast({
-          title: "Installation Cancelled",
-          description: "App installation was cancelled.",
-        })
-      }
-      setDeferredPrompt(null)
-    } catch (error) {
-      console.error('Error triggering install prompt:', error)
-      setGeneralError('Failed to trigger installation prompt. Please try again.')
-      toast({
-        title: "PWA Installation Error",
-        description: "Failed to trigger installation prompt. Please try again.",
-        variant: "destructive",
-      })
-    }
-  }
+    setDeferredPrompt(null);
+  };
 
   let mainContent
   if (isUploading) {
@@ -529,12 +370,26 @@ const App = () => {
         isLoggedIn={isLoggedIn}
         handleGoogleLogin={() => setShowLoginModal(true)}
         handleLogout={handleLogout}
-        handleInstallClick={handleInstallClick}
-        isAppInstalled={isAppInstalled}
-        isMobile={isMobile}
       />
 
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {showInstallPrompt && (
+          <div className="rounded-lg bg-blue-50 border border-blue-200 p-4 mb-6 text-center">
+            <div className="flex items-center justify-center space-x-2">
+              <Zap className="h-5 w-5 text-blue-500" />
+              <span className="text-sm font-medium text-blue-700">
+                Install Bloom Uploads for a better experience!
+              </span>
+              <Button
+                onClick={handleInstallClick}
+                className="inline-flex items-center space-x-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                <Globe className="h-4 w-4" />
+                <span>Install App</span>
+              </Button>
+            </div>
+          </div>
+        )}
         {mainContent}
       </main>
 
@@ -585,7 +440,7 @@ const App = () => {
 
       {showLoginModal && (
         <Dialog open={showLoginModal} onOpenChange={setShowLoginModal}>
-          <DialogContent>
+          <DialogContent className="bg-white p-6 rounded-lg shadow-lg animate-in zoom-in-95 duration-300 max-w-md mx-auto">
             <DialogHeader>
               <DialogTitle>Log in to Create Sponsored Wallet</DialogTitle>
             </DialogHeader>
