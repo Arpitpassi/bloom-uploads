@@ -424,12 +424,26 @@ export const useAppLogic = (arweave: any) => {
     )
 
     try {
+      // Save sponsor address if provided and wallet type is sponsored
       if (sponsorWalletAddress && walletType === "sponsored") {
         const savedProfile = localStorage.getItem("turboUploaderProfile")
         if (savedProfile) {
           const { name, wallet } = JSON.parse(savedProfile)
           saveProfile(name, wallet, sponsorWalletAddress)
+          setSavedSponsorAddress(sponsorWalletAddress) // Update state immediately
         }
+      }
+
+      // Also save sponsor address if it's a new one being entered
+      if (sponsorWalletAddress && sponsorWalletAddress !== savedSponsorAddress) {
+        if (walletType === "sponsored") {
+          const savedProfile = localStorage.getItem("turboUploaderProfile")
+          if (savedProfile) {
+            const { name, wallet } = JSON.parse(savedProfile)
+            saveProfile(name, wallet, sponsorWalletAddress)
+          }
+        }
+        setSavedSponsorAddress(sponsorWalletAddress) // Update state for both sponsored and external wallets
       }
 
       const uploadOptions = {
