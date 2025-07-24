@@ -1,5 +1,5 @@
 import React from 'react'
-import { LogOut, User, Wallet, Check, Copy, Trash2 } from 'lucide-react'
+import { LogOut, User, Wallet, Check, Copy, Trash2, Globe } from 'lucide-react'
 import { Button } from './ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu'
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar'
@@ -22,6 +22,8 @@ interface HeaderProps {
   isLoggedIn: boolean
   handleGoogleLogin: () => void
   handleLogout: () => void
+  handleInstallClick: () => void
+  isAppInstalled: boolean
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -42,6 +44,8 @@ const Header: React.FC<HeaderProps> = ({
   isLoggedIn,
   handleGoogleLogin,
   handleLogout,
+  handleInstallClick,
+  isAppInstalled,
 }) => {
   const shortenAddress = (addr: string) => {
     if (!addr) return 'Not connected'
@@ -155,6 +159,12 @@ const Header: React.FC<HeaderProps> = ({
                   <DropdownMenuItem onClick={connectWallet} className="px-3 py-2 hover:bg-gray-50 rounded-md text-sm font-medium text-gray-700">
                     <Wallet className="mr-2 h-4 w-4" />
                     <span>Connect Wallet</span>
+                  </DropdownMenuItem>
+                )}
+                {!isAppInstalled && (
+                  <DropdownMenuItem onClick={handleInstallClick} className="px-3 py-2 hover:bg-gray-50 rounded-md text-sm font-medium text-gray-700">
+                    <Globe className="mr-2 h-4 w-4" />
+                    <span>Install App</span>
                   </DropdownMenuItem>
                 )}
                 {isLoggedIn && (

@@ -118,36 +118,50 @@ const App = () => {
   const [showInstallPrompt, setShowInstallPrompt] = useState(false)
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
+  const [isAppInstalled, setIsAppInstalled] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Register service worker
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(registration => {
+          console.log('Service Worker registered with scope:', registration.scope)
+        })
+        .catch(error => {
+          console.error('Service Worker registration failed:', error)
+        })
+    }
+  }, [])
 
   // PWA install prompt handling
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setShowInstallPrompt(true);
-    };
+      e.preventDefault()
+      setDeferredPrompt(e)
+      setShowInstallPrompt(true)
+    }
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
-  }, []);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    }
+  }, [])
 
   // Handle online/offline status
   useEffect(() => {
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
+    const handleOnline = () => setIsOffline(false)
+    const handleOffline = () => setIsOffline(true)
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
 
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
 
   // Check for stored token on app load to restore login
   useEffect(() => {
@@ -294,14 +308,15 @@ const App = () => {
   }
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
+    if (!deferredPrompt) return
+    deferredPrompt.prompt()
+    const { outcome } = await deferredPrompt.userChoice
     if (outcome === 'accepted') {
-      setShowInstallPrompt(false);
+      setIsAppInstalled(true)
+      setShowInstallPrompt(false)
     }
-    setDeferredPrompt(null);
-  };
+    setDeferredPrompt(null)
+  }
 
   let mainContent
   if (isUploading) {
@@ -370,6 +385,8 @@ const App = () => {
         isLoggedIn={isLoggedIn}
         handleGoogleLogin={() => setShowLoginModal(true)}
         handleLogout={handleLogout}
+        handleInstallClick={handleInstallClick}
+        isAppInstalled={isAppInstalled}
       />
 
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
