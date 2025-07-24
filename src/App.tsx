@@ -20,9 +20,12 @@ import {
   AlertCircle,
   Loader2,
 } from "lucide-react"
-import { ArconnectSigner, ArweaveSigner, type TurboAuthenticatedClient, TurboFactory } from "@ardrive/turbo-sdk/web"
+import { GoogleLogin, googleLogout } from "@react-oauth/google"
 import Arweave from "arweave"
 import type { JWKInterface } from "arweave/node/lib/wallet"
+import { useAppLogic } from "../hooks/applogic"
+import { animateTextContent, validateArweaveAddress } from "../hooks/utils"
+import { encryptJWK, decryptJWK } from "../lib/cryptoUtils"
 import Header from "../components/Header"
 import WalletOptionsModal from "../components/WalletOptionsModal"
 import ProfileCreationModal from "../components/ProfileCreationModal"
@@ -30,14 +33,9 @@ import SponsorInputModal from "../components/SponsorInputModal"
 import FileSelector from "../components/FileSelector"
 import UploadingIndicator from "../components/UploadingIndicator"
 import UploadResults from "../components/UploadResults"
-import { useAppLogic } from "../hooks/applogic"
-import { GoogleLogin, googleLogout } from '@react-oauth/google'
-import { encryptJWK, decryptJWK } from "../lib/cryptoUtils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog"
 import { Checkbox } from "../components/ui/checkbox"
 import { Button } from "../components/ui/button"
-
-TurboFactory.setLogLevel("debug")
 
 const arweave = new Arweave({
   host: "arweave.net",
@@ -73,7 +71,6 @@ const App = () => {
     showProfileMenu,
     walletType,
     hasSponsoredWallet,
-    
     setShowWalletOptions,
     setGeneralError,
     setShowProfileCreation,
@@ -93,7 +90,6 @@ const App = () => {
     setHasSponsoredWallet,
     setSavedSponsorAddress,
     setIsCreatingProfile,
-    
     saveProfile,
     deleteProfile,
     deleteSponsorAddress,
@@ -117,12 +113,11 @@ const App = () => {
   const [keepLoggedIn, setKeepLoggedIn] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Check for stored token on app load to restore login
   useEffect(() => {
     const storedToken = localStorage.getItem("googleAuthToken")
     if (storedToken) {
       try {
-        const decoded = JSON.parse(atob(storedToken.split('.')[1]))
+        const decoded = JSON.parse(atob(storedToken.split(".")[1]))
         const now = Math.floor(Date.now() / 1000)
         if (decoded.exp > now) {
           setIsLoggedIn(true)
@@ -136,14 +131,12 @@ const App = () => {
     }
   }, [])
 
-  // Load or create profile on Google login
   useEffect(() => {
     if (isLoggedIn && userId) {
       const savedProfile = localStorage.getItem("turboUploaderProfile")
       if (savedProfile) {
         const profile = JSON.parse(savedProfile)
         if (profile.userId === userId) {
-          // Decrypt existing wallet
           decryptJWK(profile.encryptedJWK, profile.salt, profile.iv, userId)
             .then((jwk) => {
               setUnlockedWallet(jwk)
@@ -162,13 +155,11 @@ const App = () => {
           handleLogout()
         }
       } else {
-        // Automatically open profile creation for new users
         setShowProfileCreation(true)
       }
     }
   }, [isLoggedIn, userId, setProfileName, setSavedSponsorAddress, setSponsorWalletAddress, setWalletType, setHasSponsoredWallet])
 
-  // Sync wallet state with unlocked wallet
   useEffect(() => {
     if (unlockedWallet) {
       setWallet(unlockedWallet)
@@ -181,7 +172,7 @@ const App = () => {
 
   const handleGoogleSuccess = (response: any) => {
     const token = response.credential
-    const decoded = JSON.parse(atob(token.split('.')[1]))
+    const decoded = JSON.parse(atob(token.split(".")[1]))
     setIsLoggedIn(true)
     setUserId(decoded.sub)
     if (keepLoggedIn) {
@@ -236,7 +227,7 @@ const App = () => {
         salt,
         iv,
         userId,
-        sponsorAddress: savedSponsorAddress || ""
+        sponsorAddress: savedSponsorAddress || "",
       }
       localStorage.setItem("turboUploaderProfile", JSON.stringify(profile))
       setProfileName(name)
@@ -320,7 +311,7 @@ const App = () => {
         isLoggedIn={isLoggedIn}
         handleGoogleLogin={() => setShowLoginModal(true)}
         handleLogout={handleLogout}
-        isMobile={isMobile} // Added isMobile prop
+        isMobile={isMobile}
       />
 
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">{mainContent}</main>
@@ -362,7 +353,7 @@ const App = () => {
           onSubmit={(address: string) => {
             setSponsorWalletAddress(address)
             setShowSponsorInput(false)
-            handleUpload()
+            handleUploadClick() // Use handleUploadClick instead of handleUpload
           }}
           error={generalError}
           sponsorWalletAddress={sponsorWalletAddress}
