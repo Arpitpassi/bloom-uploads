@@ -170,10 +170,11 @@ const Header: React.FC<HeaderProps> = ({
   }
 
   const handleDeleteProfile = () => {
-    deleteProfile()
-    showToast("Profile Deleted!", "error")
-    setShowProfileMenu(false)
-  }
+  deleteProfile()
+  handleLogout()
+  showToast("Profile Deleted!", "error")
+  setShowProfileMenu(false)
+}
 
   const handleDeleteSponsorAddress = () => {
     deleteSponsorAddress()

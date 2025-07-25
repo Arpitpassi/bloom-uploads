@@ -124,17 +124,20 @@ export const useAppLogic = (arweave: any) => {
   }
 
   const deleteProfile = () => {
-    localStorage.removeItem("turboUploaderProfile")
-    setProfileName("")
-    setWallet(null)
-    setAddress("")
-    setTurbo(null)
-    setWalletType(null)
-    setHasSponsoredWallet(false)
-    setSavedSponsorAddress("")
-    setSponsorWalletAddress("")
-    setShowWalletOptions(false)
-  }
+  localStorage.clear()
+  setWallet(null)
+  setAddress("")
+  setProfileName("")
+  setSavedSponsorAddress("")
+  setSponsorWalletAddress("")
+  setWalletType(null)
+  setHasSponsoredWallet(false)
+  setShowProfileMenu(false)
+  toast({
+    title: "Success",
+    description: "Profile deleted successfully!",
+  })
+}
 
   const deleteSponsorAddress = () => {
     const savedProfile = localStorage.getItem("turboUploaderProfile")
