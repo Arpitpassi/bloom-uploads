@@ -124,20 +124,20 @@ export const useAppLogic = (arweave: any) => {
   }
 
   const deleteProfile = () => {
-  localStorage.clear()
-  setWallet(null)
-  setAddress("")
-  setProfileName("")
-  setSavedSponsorAddress("")
-  setSponsorWalletAddress("")
-  setWalletType(null)
-  setHasSponsoredWallet(false)
-  setShowProfileMenu(false)
-  toast({
-    title: "Success",
-    description: "Profile deleted successfully!",
-  })
-}
+    localStorage.clear()
+    setWallet(null)
+    setAddress("")
+    setProfileName("")
+    setSavedSponsorAddress("")
+    setSponsorWalletAddress("")
+    setWalletType(null)
+    setHasSponsoredWallet(false)
+    setShowProfileMenu(false)
+    toast({
+      title: "Success",
+      description: "Profile deleted successfully!",
+    })
+  }
 
   const deleteSponsorAddress = () => {
     const savedProfile = localStorage.getItem("turboUploaderProfile")
@@ -383,7 +383,7 @@ export const useAppLogic = (arweave: any) => {
   }
 
   const handleUploadClick = () => {
-    if (!wallet) {
+    if (!wallet && !connected) {
       setShowWalletOptions(true)
       return
     }
@@ -624,7 +624,7 @@ export const useAppLogic = (arweave: any) => {
     formatFileSize,
     generateRandomJwk,
     handleProfileCreation,
-    handleProfileCreationCancel, // Add this new function
+    handleProfileCreationCancel,
     connectWallet,
     handleUploadClick,
     handleUpload,
